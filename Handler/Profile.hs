@@ -15,8 +15,7 @@ getProfileR = do
     (_, user) <- requireAuthPair
     defaultLayout $ do
     	sess <- getSession
-        let access_token = lookup "access_token" sess
+    	let access_token = lookup "access_token" sess
     	let uname = lookup "login" sess
-    --    deets <- repoDetails uname
-        setTitle . toHtml $ (show access_token)  <> "'s User page"
+        setTitle . toHtml $ Data.Text.Encoding.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
