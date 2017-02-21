@@ -95,6 +95,8 @@ library
                  , time
                  , case-insensitive
                  , wai
+                 , github
+                 , utf8-string
 
 executable         GithubOAuth
     if flag(library-only)

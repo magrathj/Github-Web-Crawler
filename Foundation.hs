@@ -35,6 +35,14 @@ data App = App
     }
 
 
+    
+clientId :: Text
+clientId = "b1e4000692070beca2a3"
+
+clientSecret :: Text
+clientSecret = "5d914212abbe3f29e2f0295dab18f6f16a9d5cb4"
+
+
 
 
 data MenuItem = MenuItem
@@ -230,6 +238,8 @@ instance YesodAuth App where
 
 
     authenticate creds = runDB $ do
+        mapM_ (uncurry setSession) $ credsExtra creds
+	
         x <- getBy $ UniqueUser $ credsIdent creds
         case x of
             Just (Entity uid _) -> return $ Authenticated uid
@@ -271,14 +281,6 @@ instance HasHttpManager App where
     getHttpManager = appHttpManager
 
 
-
-
-    
-clientId :: Text
-clientId = "b1e4000692070beca2a3"
-
-clientSecret :: Text
-clientSecret = "5d914212abbe3f29e2f0295dab18f6f16a9d5cb4"
 
 
 
