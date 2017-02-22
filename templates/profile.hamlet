@@ -7,4 +7,8 @@
       This page is protected and access is allowed only for authenticated users.
 
     <p>
-      Your data is protected with us <strong><span class="username">#{show uname }</span></strong>!
+      Your data is protected with us <strong><span class="username">#{show deets}</span></strong>!
+
+<div>
+<!-- load the d3.js library -->    
+<script src="http://d3js.org/d3.v3.min.js"></script>
