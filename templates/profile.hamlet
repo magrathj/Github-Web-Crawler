@@ -7,6 +7,8 @@
       This page is protected and access is allowed only for authenticated users.
 
     <p>
+      Your data is protected with us <strong><span class="username">#{show auth}</span></strong>!
+    <p>
       Your data is protected with us <strong><span class="username">#{show deets}</span></strong>!
 
 <div>
