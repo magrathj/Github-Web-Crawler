@@ -74,7 +74,7 @@ getProfileR = do
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
 	content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-	follow <- liftIO $ followers (En.decodeUtf8 (fromJust uname)) auth 
+	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -106,16 +106,32 @@ readme owner = do
 
 
 
-followers ::  Text -> Maybe GHD.Auth -> IO() 
+followers ::  Text -> Maybe GHD.Auth -> IO[Rep] 
 followers uname auth  = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
-    T.putStrLn $ either (("Error: " <>) . Data.Text.pack . show)
-                        (foldMap ((<> "\n") . formatUser))
-                        possibleUsers
+    case possibleUsers of
+        (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
+	(Right  repos) -> do
+           x <- mapM formatUser repos
+           return (V.toList x)
 
-formatUser ::  GithubUsers.SimpleUser -> Text
-formatUser =  GithubUsers.untagName .  GithubUsers.simpleUserLogin
 
+followers' ::  Text -> Maybe GHD.Auth -> IO[Rep] 
+followers' uname auth  = do
+    possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowedByR (mkUserName uname) GitHub.FetchAll 
+    case possibleUsers of
+        (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
+	(Right  repos) -> do
+           x <- mapM formatUser repos
+           return (V.toList x)
+
+
+
+formatUser ::  GithubUsers.SimpleUser -> IO(Rep)
+formatUser repo = do
+             let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
+	     return (Rep any)
+ 
 
 
 
