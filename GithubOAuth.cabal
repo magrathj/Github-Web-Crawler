@@ -82,6 +82,7 @@ library
                  , directory                     >= 1.1        && < 1.4
                  , warp                          >= 3.0        && < 3.3
                  , data-default
+                 , bson-generic
                  , aeson                         >= 0.6        && < 1.1
                  , conduit                       >= 1.0        && < 2.0
                  , monad-logger                  >= 0.3        && < 0.4
@@ -171,3 +172,4 @@ test-suite test
                  , classy-prelude
                  , classy-prelude-yesod
                  , aeson
+                 , bson-generic

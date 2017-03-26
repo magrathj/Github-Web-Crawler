@@ -2,7 +2,11 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
+
 extra-deps:
+- bson-generic-0.0.6
+- bson-0.1.7
+- compact-string-fix-0.3.2
 - load-env-0.1.1
 - aeson-0.11.3.0
 - hoauth2-0.5.4.0

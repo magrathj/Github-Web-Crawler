@@ -10,6 +10,10 @@
       Your data is protected with us <strong><span class="username">#{show auth}</span></strong>!
     <p>
       Your data is protected with us <strong><span class="username">#{show deets}</span></strong>!
+    <p>
+      Your data is protected with us <strong><span class="username">#{show userData}</span></strong>!
+    <p>
+      Your data is protected with us <strong><span class="username">#{show content}</span></strong>!
 
 <div>
 <!-- load the d3.js library -->    
