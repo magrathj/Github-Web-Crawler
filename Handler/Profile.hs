@@ -27,6 +27,7 @@ import Prelude ()
 import Data.ByteString.Char8 as DBC hiding (unpack, putStrLn, find)
 import qualified GitHub.Endpoints.Repos as Github
 import qualified GitHub.Endpoints.Users.Followers as GithubUsers
+import qualified GitHub.Endpoints.Users as GithubUser
 import GitHub as MainGitHub
 import GitHub.Data as GHD
 import GitHub.Data.Content as GHDC
@@ -34,7 +35,7 @@ import GitHub.Data.Repos as GHDR
 import GitHub.Data.Name as GHDN
 import Data.Bson.Generic
 import qualified Data.Map as M hiding (split)
-
+import Data.Text.IO as T (putStrLn)
 
 data Rep = Rep{
         follower_name      :: Text
@@ -73,6 +74,7 @@ getProfileR = do
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
 	content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
+	follow <- liftIO $ followers auth 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -101,3 +103,20 @@ readme owner = do
      case possiblereadmes of
         (Left error)  -> return ([RepoContent (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right (Github.ContentFile cd))  -> return ([RepoContent (Data.Text.pack (show cd))])
+
+
+
+followers ::  Maybe GHD.Auth -> IO() 
+followers auth  = do
+    possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowedByR "jaytcd" GitHub.FetchAll 
+    T.putStrLn $ either (("Error: " <>) . Data.Text.pack . show)
+                        (foldMap ((<> "\n") . formatUser))
+                        possibleUsers
+
+formatUser ::  GithubUsers.SimpleUser -> Text
+formatUser =  GithubUsers.untagName .  GithubUsers.simpleUserLogin
+
+
+
+
+
