@@ -74,7 +74,7 @@ getProfileR = do
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
 	content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-	follow <- liftIO $ followers auth 
+	follow <- liftIO $ followers (En.decodeUtf8 (fromJust uname)) auth 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -106,9 +106,9 @@ readme owner = do
 
 
 
-followers ::  Maybe GHD.Auth -> IO() 
-followers auth  = do
-    possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowedByR "jaytcd" GitHub.FetchAll 
+followers ::  Text -> Maybe GHD.Auth -> IO() 
+followers uname auth  = do
+    possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
     T.putStrLn $ either (("Error: " <>) . Data.Text.pack . show)
                         (foldMap ((<> "\n") . formatUser))
                         possibleUsers
