@@ -60,7 +60,8 @@ data RepoContent = RepoContent{
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 data UserInfo = UserInfo{
-    user_name :: Text
+    user_name :: Text,
+    user_url :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
@@ -138,16 +139,11 @@ formatUser repo = do
  
 
 
-
-
-
-
-
 showUsers :: Text -> Maybe GHD.Auth -> IO(UserInfo)
 showUsers uname auth  = do
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
-        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error"))
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
@@ -157,8 +153,10 @@ formatUserInfo ::  GithubUser.User -> IO(UserInfo)
 formatUserInfo user = do
          let userName =  GithubUser.userName user
          let logins =  GithubUser.userLogin user
+	 let htmlUrl = GithubUser.userHtmlUrl user
+	 let htmlUser = GithubUser.getUrl htmlUrl
 	 let login =  GithubUser.untagName logins
-         return (UserInfo login)
+         return (UserInfo login htmlUser)
   
 
 
