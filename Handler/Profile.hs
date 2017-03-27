@@ -41,6 +41,9 @@ data Rep = Rep{
         follower_name      :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+follower_Rep_Text :: Rep -> Text  
+follower_Rep_Text (Rep follower) = follower
+
 
 data GithubOwner' = GithubOwner'{
         follower_name'      :: String
@@ -65,7 +68,9 @@ data UserInfo = UserInfo{
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
-
+----------------------------------------------
+--  Profile Handler
+----------------------------------------------
 getProfileR :: Handler Html
 getProfileR = do
     (_, user) <- requireAuthPair
@@ -77,14 +82,19 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
-        content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
-        --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth 
+        follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
+	--following <- liftIO $ followingtext (En.decodeUtf8 (fromJust uname)) auth
+        --content <- liftIO $ showUsers follow auth 
+        content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
+
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
 
 
+------------------------------------------------------------------------------
+-- Get user's repo data taking in user's name
+-----------------------------------------------------------------------------
 repos :: Text -> IO[RepoData]
 repos uname = do
   possibleRepos <- Github.userRepos (mkOwnerName uname) GHDR.RepoPublicityAll
@@ -94,13 +104,19 @@ repos uname = do
          x <- mapM formatRepo repos
          return (V.toList x)
 
+-------------------------------------------------------------------------
+-- Format repo data - using repo data type
+-------------------------------------------------------------------------
 formatRepo :: Github.Repo -> IO(RepoData)
 formatRepo repo = do
 	let repoName = untagName (GHDR.repoName repo)
 	let repoOwer = untagName $ simpleOwnerLogin (GHDR.repoOwner repo)
 	return (RepoData repoName repoOwer)
 
-
+	   
+--------------------------------------------------------------------------
+-- Get readme file data from username - TODO pass repo name as a variable
+--------------------------------------------------------------------------
 readme :: Text ->  IO[RepoContent]
 readme owner = do
      let repo = Data.Text.Encoding.decodeUtf8 "CS7009"
@@ -110,7 +126,9 @@ readme owner = do
 	(Right (Github.ContentFile cd))  -> return ([RepoContent (Data.Text.pack (show cd))])
 
 
-
+-------------------------------------------------------------------
+-- Following function - returns data types rep for easy printing
+--------------------------------------------------------------------
 followers ::  Text -> Maybe GHD.Auth -> IO[Rep] 
 followers uname auth  = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
@@ -120,7 +138,9 @@ followers uname auth  = do
            x <- mapM formatUser repos
            return (V.toList x)
 
-
+----------------------------------------------------------------
+-- Followers function - returns data types rep for easy printing
+----------------------------------------------------------------
 followers' ::  Text -> Maybe GHD.Auth -> IO[Rep] 
 followers' uname auth  = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowedByR (mkUserName uname) GitHub.FetchAll 
@@ -129,26 +149,33 @@ followers' uname auth  = do
 	(Right  repos) -> do
            x <- mapM formatUser repos
            return (V.toList x)
-
-
-
+	   
+----------------------------------------------
+-- Format user info into Rep data type
+---------------------------------------------
 formatUser ::  GithubUsers.SimpleUser -> IO(Rep)
 formatUser repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
 	     return (Rep any)
- 
 
 
-showUsers :: Text -> Maybe GHD.Auth -> IO(UserInfo)
-showUsers uname auth  = do
+
+-----------------------------------------------
+--Show users details function 
+-----------------------------------------------
+showUsers ::  Rep -> Maybe GHD.Auth -> IO(UserInfo)
+showUsers rep auth  = do 
+  let uname = follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
         (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
-
-
+	   
+-----------------------------------------------
+--format data into data type UserInfo 
+-----------------------------------------------
 formatUserInfo ::  GithubUser.User -> IO(UserInfo)
 formatUserInfo user = do
          let userName =  GithubUser.userName user
