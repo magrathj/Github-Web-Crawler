@@ -59,6 +59,9 @@ data RepoContent = RepoContent{
 	repo_content :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+data UserInfo = UserInfo{
+    user_name :: Text
+}deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
 
@@ -73,7 +76,8 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
-	content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
+        content <- liftIO $ showUsers auth 
+        --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
@@ -134,5 +138,27 @@ formatUser repo = do
  
 
 
+
+
+
+
+
+showUsers :: Maybe GHD.Auth -> IO(UserInfo)
+showUsers auth  = do
+  possibleUser <- GithubUser.userInfoFor' auth "jaytcd"
+  case possibleUser of
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error"))
+	(Right use)   -> do
+           x <- formatUserInfo use
+           return x
+
+
+formatUserInfo ::  GithubUser.User -> IO(UserInfo)
+formatUserInfo user = do
+         let userName =  GithubUser.userName user
+         let logins =  GithubUser.userLogin user
+	 let login =  GithubUser.untagName logins
+         return (UserInfo login)
+  
 
 
