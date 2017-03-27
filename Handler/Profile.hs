@@ -76,7 +76,7 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
-        content <- liftIO $ showUsers auth 
+        content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
@@ -143,9 +143,9 @@ formatUser repo = do
 
 
 
-showUsers :: Maybe GHD.Auth -> IO(UserInfo)
-showUsers auth  = do
-  possibleUser <- GithubUser.userInfoFor' auth "jaytcd"
+showUsers :: Text -> Maybe GHD.Auth -> IO(UserInfo)
+showUsers uname auth  = do
+  possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
         (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
