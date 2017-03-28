@@ -12,7 +12,7 @@
 module Handler.Profile where
 
 import Import hiding (unpack, pack)
-import Data.List hiding(intercalate, map, lookup)
+import Data.List hiding(intercalate, lookup)
 --import qualified GitHub.Endpoints.Repos as Github
 import GitHub.Data as GHD
 import GitHub.Data.Repos as GHDR
@@ -84,8 +84,8 @@ getProfileR = do
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	--following <- liftIO $ followingtext (En.decodeUtf8 (fromJust uname)) auth
-        --content <- liftIO $ showUsers follow auth 
-        content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
+        content <- liftIO $ showUsers follow auth 
+        --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
@@ -163,16 +163,20 @@ formatUser repo = do
 -----------------------------------------------
 --Show users details function 
 -----------------------------------------------
-showUsers ::  Rep -> Maybe GHD.Auth -> IO(UserInfo)
-showUsers rep auth  = do 
-  let uname = follower_Rep_Text rep
+showUsers ::  [Rep] -> Maybe GHD.Auth -> IO(UserInfo)
+showUsers rep auth  = do
+  let uname = Data.List.head $ Data.List.map follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
         (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
-	   
+
+
+
+
+
 -----------------------------------------------
 --format data into data type UserInfo 
 -----------------------------------------------
@@ -184,6 +188,19 @@ formatUserInfo user = do
 	 let htmlUser = GithubUser.getUrl htmlUrl
 	 let login =  GithubUser.untagName logins
          return (UserInfo login htmlUser)
+  
+
+
+-------------------------------------------------
+-- TODO - function to take [Rep] list and output
+-- [userInfo] data
+--
+-- 1. apply follow_rep_txt function using map get
+-- a [] of Text data from [Rep].
+-- 2. apply map to showUsers
+-- 3. ouput [UserInfo] data and display it
+-------------------------------------------------
+
   
 
 
