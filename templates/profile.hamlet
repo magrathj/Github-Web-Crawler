@@ -14,8 +14,10 @@
       Your data is protected with us <strong><span class="username">#{show userData}</span></strong>!
     <p>
       Your data is protected with us <strong><span class="username">#{show content}</span></strong>!
-     <p>
-      following <strong><span class="username">#{show follow}</span></strong>!  
+    <p>
+      following <strong><span class="username">#{show follow}</span></strong>!
+    <p>
+      following next hop <strong><span class="username">#{show following}</span></strong>!  
 
 <div>
 <!-- load the d3.js library -->    

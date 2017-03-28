@@ -83,7 +83,8 @@ getProfileR = do
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	--following <- liftIO $ followingtext (En.decodeUtf8 (fromJust uname)) auth
+	let next_hop = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text follow 
+	following <- liftIO $ followers' next_hop auth
         content <- liftIO $ showUsers follow auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
 
