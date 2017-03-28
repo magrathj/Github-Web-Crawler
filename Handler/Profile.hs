@@ -165,7 +165,7 @@ formatUser repo = do
 -----------------------------------------------
 showUsers ::  [Rep] -> Maybe GHD.Auth -> IO(UserInfo)
 showUsers rep auth  = do
-  let uname = Data.List.head $ Data.List.map follower_Rep_Text rep
+  let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
         (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error"))
@@ -174,6 +174,18 @@ showUsers rep auth  = do
            return x
 
 
+
+-------------------------------------------------
+-- TODO - function to take [Rep] list and output
+-- [userInfo] data
+--
+-- 1. apply follow_rep_txt function using map get
+-- a [] of Text data from [Rep].
+-- 2. apply map to showUsers
+-- 3. ouput [UserInfo] data and display it
+-------------------------------------------------
+
+  
 
 
 
@@ -190,17 +202,5 @@ formatUserInfo user = do
          return (UserInfo login htmlUser)
   
 
-
--------------------------------------------------
--- TODO - function to take [Rep] list and output
--- [userInfo] data
---
--- 1. apply follow_rep_txt function using map get
--- a [] of Text data from [Rep].
--- 2. apply map to showUsers
--- 3. ouput [UserInfo] data and display it
--------------------------------------------------
-
-  
 
 
