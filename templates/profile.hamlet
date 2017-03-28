@@ -7,9 +7,9 @@
       This page is protected and access is allowed only for authenticated users.
 
     <p>
-      Your data is protected with us <strong><span class="username">#{show auth}</span></strong>!
+      OAuth token <strong><span class="username">#{show uname}</span></strong>!
     <p>
-      Your data is protected with us <strong><span class="username">#{show deets}</span></strong>!
+      Data deets  <strong><span class="username">#{show deets}</span></strong>!
     <p>
       Your data is protected with us <strong><span class="username">#{show userData}</span></strong>!
     <p>
@@ -17,8 +17,8 @@
     <p>
       following <strong><span class="username">#{show follow}</span></strong>!
     <p>
-      following next hop <strong><span class="username">#{show following}</span></strong>!  
-
+      following next hop<strong><span class="username">#{show following}</span></strong>!
+    
 <div>
 <!-- load the d3.js library -->    
 <script src="http://d3js.org/d3.v3.min.js"></script>

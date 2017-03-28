@@ -81,12 +81,14 @@ getProfileR = do
        -- let deets = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
-        deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	let next_hop = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text follow 
+	let next_hop = Data.List.head $ Data.List.map follower_Rep_Text follow
+	--deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
+	deets <- liftIO $ repos next_hop
 	following <- liftIO $ followers' next_hop auth
-        content <- liftIO $ showUsers follow auth 
+        --content <- liftIO $ showUsers follow auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
+	content <- liftIO $ readme next_hop
 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
