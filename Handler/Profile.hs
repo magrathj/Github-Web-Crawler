@@ -36,6 +36,7 @@ import GitHub.Data.Name as GHDN
 import Data.Bson.Generic
 import qualified Data.Map as M hiding (split)
 import Data.Text.IO as T (putStrLn)
+import Control.Monad (when, liftM)
 
 data Rep = Rep{
         follower_name      :: Text
@@ -43,6 +44,8 @@ data Rep = Rep{
 
 follower_Rep_Text :: Rep -> Text  
 follower_Rep_Text (Rep follower) = follower
+
+
 
 
 data GithubOwner' = GithubOwner'{
@@ -64,7 +67,8 @@ data RepoContent = RepoContent{
 
 data UserInfo = UserInfo{
     user_name :: Text,
-    user_url :: Text
+    user_url :: Text,
+    user_location ::Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
@@ -83,12 +87,14 @@ getProfileR = do
 	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	let next_hop = Data.List.head $ Data.List.map follower_Rep_Text follow
+	
 	--deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
 	deets <- liftIO $ repos next_hop
 	following <- liftIO $ followers' next_hop auth
-        --content <- liftIO $ showUsers follow auth 
+	content <- liftIO $ crawler next_hop auth 
+        --content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-	content <- liftIO $ readme next_hop
+	--content <- liftIO $ readme next_hop
 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
@@ -152,26 +158,27 @@ followers' uname auth  = do
 	(Right  repos) -> do
            x <- mapM formatUser repos
            return (V.toList x)
-	   
+
+
 ----------------------------------------------
 -- Format user info into Rep data type
 ---------------------------------------------
-formatUser ::  GithubUsers.SimpleUser -> IO(Rep)
+formatUser ::  GithubUsers.SimpleUser ->IO(Rep)
 formatUser repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
-	     return (Rep any)
+             return (Rep any)
 
 
 
 -----------------------------------------------
 --Show users details function 
 -----------------------------------------------
-showUsers ::  [Rep] -> Maybe GHD.Auth -> IO(UserInfo)
-showUsers rep auth  = do
-  let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
+showUsers ::  Text -> Maybe GHD.Auth -> IO(UserInfo)
+showUsers uname auth  = do
+  --let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
-        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error"))
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
@@ -188,7 +195,12 @@ showUsers rep auth  = do
 -- 3. ouput [UserInfo] data and display it
 -------------------------------------------------
 
-  
+crawler :: Text -> Maybe GHD.Auth -> IO[Rep]
+crawler xs auth = do
+     x <- liftIO $ followers xs auth
+     let next_hop = Data.List.head $ Data.List.map follower_Rep_Text x
+     y <- liftIO $ followers next_hop auth
+     return (y)
 
 
 
@@ -202,7 +214,9 @@ formatUserInfo user = do
 	 let htmlUrl = GithubUser.userHtmlUrl user
 	 let htmlUser = GithubUser.getUrl htmlUrl
 	 let login =  GithubUser.untagName logins
-         return (UserInfo login htmlUser)
+	 let location = GithubUser.userLocation user
+	 let userlocation = fromMaybe "" location
+         return (UserInfo login htmlUser userlocation)
   
 
 
