@@ -4,6 +4,7 @@ packages:
 - '.'
 
 extra-deps:
+- hasbolt-0.1.0.9
 - bson-generic-0.0.6
 - bson-0.1.7
 - compact-string-fix-0.3.2

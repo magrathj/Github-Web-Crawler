@@ -98,6 +98,7 @@ library
                  , wai
                  , github
                  , utf8-string
+                 , hasbolt
 
 executable         GithubOAuth
     if flag(library-only)
@@ -173,3 +174,4 @@ test-suite test
                  , classy-prelude-yesod
                  , aeson
                  , bson-generic
+                 , hasbolt

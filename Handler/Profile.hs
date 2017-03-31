@@ -37,6 +37,10 @@ import Data.Bson.Generic
 import qualified Data.Map as M hiding (split)
 import Data.Text.IO as T (putStrLn)
 import Control.Monad (when, liftM)
+import Database.Bolt
+import Data.Text
+import qualified Data.Map as DM
+
 
 data Rep = Rep{
         follower_name      :: Text
@@ -84,18 +88,21 @@ getProfileR = do
     	let uname = lookup "login" sess
        -- let deets = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
-	let userData = GithubOwner' (unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
+	let userData = GithubOwner' (Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	let next_hop = Data.List.head $ Data.List.map follower_Rep_Text follow
-	
-	--deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
-	deets <- liftIO $ repos next_hop
+	let next =  Data.List.map follower_Rep_Text follow
+	deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
+	--deets <- liftIO $ repos next_hop
 	following <- liftIO $ followers' next_hop auth
-	content <- liftIO $ crawler next_hop auth 
+	let uname_crawl = (En.decodeUtf8 (fromJust uname))
+	let applyfollow = followers auth
+        --following = Data.List.map applyfollow next
+	--content <-  crawler [(En.decodeUtf8 (fromJust uname))] auth
         --content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
 	--content <- liftIO $ readme next_hop
-
+        content <- liftIO $ testFunction (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -138,8 +145,8 @@ readme owner = do
 -------------------------------------------------------------------
 -- Following function - returns data types rep for easy printing
 --------------------------------------------------------------------
-followers ::  Text -> Maybe GHD.Auth -> IO[Rep] 
-followers uname auth  = do
+followers ::  Maybe GHD.Auth -> Text -> IO[Rep] 
+followers auth uname = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
     case possibleUsers of
         (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
@@ -195,12 +202,52 @@ showUsers uname auth  = do
 -- 3. ouput [UserInfo] data and display it
 -------------------------------------------------
 
-crawler :: Text -> Maybe GHD.Auth -> IO[Rep]
-crawler xs auth = do
-     x <- liftIO $ followers xs auth
-     let next_hop = Data.List.head $ Data.List.map follower_Rep_Text x
-     y <- liftIO $ followers next_hop auth
-     return (y)
+--crawler :: [Text] -> Maybe GHD.Auth -> [Text]
+--crawler [] auth = [Data.Text.Encoding.decodeUtf8 ""]
+--crawler (x:xs) auth = (  Data.List.map follower_Rep_Text $ Data.List.concat $ liftIO $ followers' x auth) Data.List.++ crawler xs auth
+
+--crawler first auth list =
+--   let crawlerz = crawler (Data.List.head $ Data.List.union list $ Data.List.map follower_Rep_Text-- $ followers first auth) auth ( Data.List.map follower_Rep_Text $ (followers first auth))
+--   in Data.List.union list crawlerz 
+
+
+
+     --x <- liftIO $ followers xs auth
+     --let uname = Data.List.union uname $ Data.List.map follower_Rep_Text x
+     -- isNoth <- liftIO $ checkList uname auth
+     --return uname --isNoth  --(uname Data.List.++ (liftIO $ checkList uname auth))
+     
+
+     --let next_hop = Data.List.map follower_Rep_Text x
+     --return list
+     --case isNull of
+     --  True  -> return list
+     --  False -> return list
+        -- let uname = Data.List.tail uname
+	-- return uname
+	-- isNull2 <- checkList uname
+	-- case isNull2 of 
+        --   True -> return list
+	--   False -> do
+	--     let uname_minus_one = Data.List.head uname
+	--     liftIO $ crawler uname_minus_one auth uname
+        --     return list
+
+
+
+
+checkList :: [Text] -> Maybe GHD.Auth -> IO[Text]
+checkList list auth =
+   case Data.List.null list of
+      True -> return [] --[(Data.Text.Encoding.decodeUtf8 "True")]
+      False -> return [] --[(Data.Text.Encoding.decodeUtf8 "False")]
+      --( liftIO $ crawler (Data.List.head list) auth (Data.List.tail list))
+  
+		              -- Data.List.head $  
+                              --let next_hop = Data.List.head $ Data.List.map follower_Rep_Text x
+                              -- y <- liftIO $ showUsers next_hop auth
+                              -- liftIO $ crawler next_hop auth uname
+                      
 
 
 
@@ -221,3 +268,11 @@ formatUserInfo user = do
 
 
 
+testFunction :: Text ->  IO [Record]
+testFunction userName = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   close pipe
+   return result
+ where cypher = "CREATE (n:User {name: {userName}}) RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName)]
