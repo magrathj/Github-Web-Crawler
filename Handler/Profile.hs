@@ -90,19 +90,20 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	let userData = GithubOwner' (Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
         follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	let next_hop = Data.List.head $ Data.List.map follower_Rep_Text follow
+	let next_hop = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text follow
 	let next =  Data.List.map follower_Rep_Text follow
 	deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
 	--deets <- liftIO $ repos next_hop
-	following <- liftIO $ followers' next_hop auth
+	--following <- liftIO $ followers' next_hop auth
 	let uname_crawl = (En.decodeUtf8 (fromJust uname))
 	let applyfollow = followers auth
         --following = Data.List.map applyfollow next
 	--content <-  crawler [(En.decodeUtf8 (fromJust uname))] auth
         --content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
         --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-	--content <- liftIO $ readme next_hop
-        content <- liftIO $ testFunction (En.decodeUtf8 (fromJust uname))
+        content <- liftIO $ lookupNodeNeo (En.decodeUtf8 (fromJust uname))
+        --content <- liftIO $ testFunction next_hop
+	following <- liftIO $ crawler auth next_hop
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -192,46 +193,39 @@ showUsers uname auth  = do
 
 
 
--------------------------------------------------
--- TODO - function to take [Rep] list and output
--- [userInfo] data
---
--- 1. apply follow_rep_txt function using map get
--- a [] of Text data from [Rep].
--- 2. apply map to showUsers
--- 3. ouput [UserInfo] data and display it
--------------------------------------------------
-
---crawler :: [Text] -> Maybe GHD.Auth -> [Text]
---crawler [] auth = [Data.Text.Encoding.decodeUtf8 ""]
---crawler (x:xs) auth = (  Data.List.map follower_Rep_Text $ Data.List.concat $ liftIO $ followers' x auth) Data.List.++ crawler xs auth
-
---crawler first auth list =
---   let crawlerz = crawler (Data.List.head $ Data.List.union list $ Data.List.map follower_Rep_Text-- $ followers first auth) auth ( Data.List.map follower_Rep_Text $ (followers first auth))
---   in Data.List.union list crawlerz 
 
 
-
-     --x <- liftIO $ followers xs auth
-     --let uname = Data.List.union uname $ Data.List.map follower_Rep_Text x
-     -- isNoth <- liftIO $ checkList uname auth
-     --return uname --isNoth  --(uname Data.List.++ (liftIO $ checkList uname auth))
+-----------------------------------------------------------------
+--  Crawler function 
+----------------------------------------------------------------
+crawler ::  Maybe GHD.Auth -> Text -> IO[Rep]
+crawler auth unamez = do
+  if (Data.Text.null unamez) == True then return $ [Rep (Data.Text.Encoding.decodeUtf8 "Error")]
+   else do
+      checkDB <- lookupNodeNeo unamez
+      case checkDB of
+        False -> return $ [Rep(Data.Text.Encoding.decodeUtf8 "already there")]    -- Is empty 
+        True -> do
+              let followings = followers auth unamez
+	      followings2 <- liftIO $ followings
+	   -- let text_following = Data.List.map follower_Rep_Text followings2
+	   -- inputDB <- liftIO $ testFunction unamez
+	   -- let mapCrawler = crawler auth
+	    --mapCrawlerIO <- liftIO mapCrawler
+	   -- mapM mapCrawler text_following
+              return followings2 
      
 
-     --let next_hop = Data.List.map follower_Rep_Text x
-     --return list
-     --case isNull of
-     --  True  -> return list
-     --  False -> return list
-        -- let uname = Data.List.tail uname
-	-- return uname
-	-- isNull2 <- checkList uname
-	-- case isNull2 of 
-        --   True -> return list
-	--   False -> do
-	--     let uname_minus_one = Data.List.head uname
-	--     liftIO $ crawler uname_minus_one auth uname
-        --     return list
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -295,8 +289,21 @@ lookupNodeNeo userName = do
 
   Database.Bolt.close neo_pipe
 
-  let isEmpty = Import.null records
+  let isEmpty = Data.List.null records
   return isEmpty
 
- where cypher = "MATCH (n:userName) RETURN n"
+ where cypher = "MATCH (n { name: {userName} })RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName)]
+
+
+
+
+--------------------------------------------------------------
+---  retrieve all data 
+--------------------------------------------------------------
+
+      
+
+
+
+

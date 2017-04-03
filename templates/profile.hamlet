@@ -15,7 +15,7 @@
     <p>
       Your data is protected with us <strong><span class="username">#{show content}</span></strong>!
     <p>
-      following <strong><span class="username">#{show follow}</span></strong>!
+      following <strong><span class="username">#{show next_hop}</span></strong>!
     <p>
       following next hop<strong><span class="username">#{show following}</span></strong>!
     
