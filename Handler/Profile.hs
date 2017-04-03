@@ -209,7 +209,7 @@ crawler auth unamez = do
               let followings = followers auth unamez
 	      followings2 <- liftIO $ followings
 	   -- let text_following = Data.List.map follower_Rep_Text followings2
-	   -- inputDB <- liftIO $ testFunction unamez
+	      inputDB <- liftIO $ testFunction unamez
 	   -- let mapCrawler = crawler auth
 	    --mapCrawlerIO <- liftIO mapCrawler
 	   -- mapM mapCrawler text_following
