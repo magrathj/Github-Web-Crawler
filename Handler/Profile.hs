@@ -268,6 +268,9 @@ formatUserInfo user = do
 
 
 
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
 testFunction :: Text ->  IO [Record]
 testFunction userName = do
    pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
@@ -275,4 +278,25 @@ testFunction userName = do
    close pipe
    return result
  where cypher = "CREATE (n:User {name: {userName}}) RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName)]
+
+
+
+--------------------------------------------------------------
+---  Return boolean for match of data
+--------------------------------------------------------------
+lookupNodeNeo :: Text -> IO Bool
+lookupNodeNeo userName = do
+  let neo_conf = Database.Bolt.def { Database.Bolt.user = "neo4j", Database.Bolt.password = "09/12/1992" }
+  neo_pipe <- Database.Bolt.connect $ neo_conf 
+
+  -- -- Check node
+  records <- Database.Bolt.run neo_pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+
+  Database.Bolt.close neo_pipe
+
+  let isEmpty = Import.null records
+  return isEmpty
+
+ where cypher = "MATCH (n:userName) RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName)]
