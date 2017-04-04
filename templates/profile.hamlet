@@ -7,17 +7,8 @@
       This page is protected and access is allowed only for authenticated users.
 
     <p>
-      OAuth token <strong><span class="username">#{show uname}</span></strong>!
-    <p>
-      Data deets  <strong><span class="username">#{show next}</span></strong>!
-    <p>
-      Your data is protected with us <strong><span class="username">#{show userData}</span></strong>!
-    <p>
-      Your data is protected with us <strong><span class="username">#{show content}</span></strong>!
-    <p>
-      following <strong><span class="username">#{show next_hop}</span></strong>!
-    <p>
-      following next hop<strong><span class="username">#{show following}</span></strong>!
+      OAuth token <strong><span class="username">#{show crawl}</span></strong>!
+
     
 <div>
 <!-- load the d3.js library -->    

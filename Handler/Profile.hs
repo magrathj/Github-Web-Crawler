@@ -86,24 +86,8 @@ getProfileR = do
     	sess <- getSession
     	let access_token = lookup "access_token" sess
     	let uname = lookup "login" sess
-       -- let deets = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
-	let userData = GithubOwner' (Data.Text.unpack $ Data.Text.Encoding.decodeUtf8 (fromJust uname))
-        follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	let next_hop = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text follow
-	let next =  Data.List.map follower_Rep_Text follow
-	deets <- liftIO $ repos (En.decodeUtf8 (fromJust uname))
-	--deets <- liftIO $ repos next_hop
-	--following <- liftIO $ followers' next_hop auth
-	let uname_crawl = (En.decodeUtf8 (fromJust uname))
-	let applyfollow = followers auth
-        --following = Data.List.map applyfollow next
-	--content <-  crawler [(En.decodeUtf8 (fromJust uname))] auth
-        --content <- liftIO $ showUsers (En.decodeUtf8 (fromJust uname)) auth 
-        --content <- liftIO $ readme (En.decodeUtf8 (fromJust uname))
-        content <- liftIO $ lookupNodeNeo (En.decodeUtf8 (fromJust uname))
-        --content <- liftIO $ testFunction next_hop
-	following <- liftIO $ crawler auth next_hop
+	crawl<-liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -152,7 +136,7 @@ followers auth uname = do
     case possibleUsers of
         (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
-           x <- mapM formatUser repos
+           x <- mapM (formatUser auth) repos
            return (V.toList x)
 
 ----------------------------------------------------------------
@@ -164,16 +148,17 @@ followers' uname auth  = do
     case possibleUsers of
         (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
-           x <- mapM formatUser repos
+           x <- mapM (formatUser auth) repos
            return (V.toList x)
 
 
 ----------------------------------------------
 -- Format user info into Rep data type
 ---------------------------------------------
-formatUser ::  GithubUsers.SimpleUser ->IO(Rep)
-formatUser repo = do
+formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
+formatUser auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
+	     crawler auth any 
              return (Rep any)
 
 
@@ -198,22 +183,18 @@ showUsers uname auth  = do
 -----------------------------------------------------------------
 --  Crawler function 
 ----------------------------------------------------------------
-crawler ::  Maybe GHD.Auth -> Text -> IO[Rep]
+crawler ::  Maybe GHD.Auth -> Text -> IO()
 crawler auth unamez = do
-  if (Data.Text.null unamez) == True then return $ [Rep (Data.Text.Encoding.decodeUtf8 "Error")]
+  if (Data.Text.null unamez) == True then return ()
    else do
       checkDB <- lookupNodeNeo unamez
       case checkDB of
-        False -> return $ [Rep(Data.Text.Encoding.decodeUtf8 "already there")]    -- Is empty 
+        False -> return()   -- Isnt empty, so already there
         True -> do
+	      inputDB <-  liftIO $ testFunction unamez
               let followings = followers auth unamez
-	      followings2 <- liftIO $ followings
-	   -- let text_following = Data.List.map follower_Rep_Text followings2
-	      inputDB <- liftIO $ testFunction unamez
-	   -- let mapCrawler = crawler auth
-	    --mapCrawlerIO <- liftIO mapCrawler
-	   -- mapM mapCrawler text_following
-              return followings2 
+	      followings2 <- liftIO $ followings	     
+              return ()
      
 
 
