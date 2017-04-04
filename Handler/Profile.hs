@@ -87,7 +87,8 @@ getProfileR = do
     	let access_token = lookup "access_token" sess
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
-	crawl<-liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))
+	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))
+	crawl <- liftIO $ insertFollower (En.decodeUtf8 (fromJust uname)) (En.decodeUtf8 "jaytcd")
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -193,36 +194,14 @@ crawler auth unamez = do
         True -> do
 	      inputDB <-  liftIO $ testFunction unamez
               let followings = followers auth unamez
-	      followings2 <- liftIO $ followings	     
+	      followings2 <- liftIO $ followings
+	      let follow_text = Data.List.map follower_Rep_Text followings2
+	      input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
               return ()
      
+ 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-checkList :: [Text] -> Maybe GHD.Auth -> IO[Text]
-checkList list auth =
-   case Data.List.null list of
-      True -> return [] --[(Data.Text.Encoding.decodeUtf8 "True")]
-      False -> return [] --[(Data.Text.Encoding.decodeUtf8 "False")]
-      --( liftIO $ crawler (Data.List.head list) auth (Data.List.tail list))
-  
-		              -- Data.List.head $  
-                              --let next_hop = Data.List.head $ Data.List.map follower_Rep_Text x
-                              -- y <- liftIO $ showUsers next_hop auth
-                              -- liftIO $ crawler next_hop auth uname
-                      
 
 
 
@@ -254,6 +233,32 @@ testFunction userName = do
    return result
  where cypher = "CREATE (n:User {name: {userName}}) RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName)]
+
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertFollower :: Text -> Text -> IO [Record]
+insertFollower userName userFollowers = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   close pipe
+   return result
+ where cypher = "MATCH (n { name: {userName} }) SET n += {followers: {userFollowers}} RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
+
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertFollowers :: Text -> Text -> IO [Record]
+insertFollowers userName userFollowers = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   close pipe
+   return result
+ where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:User {follower: {userFollowers}}) MERGE (n)-[r:RELATES]->(w) RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
+
+
 
 
 
