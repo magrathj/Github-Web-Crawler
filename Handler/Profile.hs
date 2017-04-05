@@ -76,6 +76,7 @@ data UserInfo = UserInfo{
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
+
 ----------------------------------------------
 --  Profile Handler
 ----------------------------------------------
