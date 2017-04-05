@@ -109,6 +109,7 @@ server =  getREADME
     getREADME = liftIO $ do
       [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
       s       <- readFile rPath
+      warnLog $ show auth
       return $ ResponseData s
 
    
