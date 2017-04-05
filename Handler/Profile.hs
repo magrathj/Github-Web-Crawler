@@ -87,8 +87,9 @@ getProfileR = do
     	let access_token = lookup "access_token" sess
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
-	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))
-	crawl <- liftIO $ insertFollower (En.decodeUtf8 (fromJust uname)) (En.decodeUtf8 "jaytcd")
+	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
+	let crawl = Data.List.head $ Data.List.map follower_Rep_Text follow
+	liftIO $ crawler auth crawl --(En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -149,18 +150,27 @@ followers' uname auth  = do
     case possibleUsers of
         (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
-           x <- mapM (formatUser auth) repos
+           x <- mapM (formatUsers auth) repos
            return (V.toList x)
 
 
 ----------------------------------------------
--- Format user info into Rep data type
+-- Format user info into Rep data type [CRAWLER]
 ---------------------------------------------
 formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
 formatUser auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
 	     crawler auth any 
              return (Rep any)
+
+----------------------------------------------
+-- Format user info into Rep data type [Followering]
+---------------------------------------------
+formatUsers ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
+formatUsers auth repo = do
+             let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
+             return (Rep any)
+
 
 
 
