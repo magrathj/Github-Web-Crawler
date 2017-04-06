@@ -40,7 +40,8 @@ import Control.Monad (when, liftM)
 import Database.Bolt
 import Data.Text
 import qualified Data.Map as DM
-
+import qualified Database.Bolt as Neo
+import qualified Data.Text as DT
 
 data Rep = Rep{
         follower_name      :: Text
@@ -90,10 +91,10 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	let crawl = Data.List.head $ Data.List.map follower_Rep_Text follow
+	crawls <- liftIO $ getNodesWithLinks 
 	liftIO $ crawler auth crawl --(En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
-
 
 
 ------------------------------------------------------------------------------
@@ -155,6 +156,7 @@ followers' uname auth  = do
            return (V.toList x)
 
 
+
 ----------------------------------------------
 -- Format user info into Rep data type [CRAWLER]
 ---------------------------------------------
@@ -171,6 +173,8 @@ formatUsers ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
 formatUsers auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
              return (Rep any)
+
+
 
 
 
@@ -293,14 +297,23 @@ lookupNodeNeo userName = do
        params = DM.fromList [("userName", Database.Bolt.T userName)]
 
 
+getNodesWithLinks :: IO [Record]
+getNodesWithLinks = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   close pipe
+   --nodeData <- mapM toNode result
+   --linkData <- mapM (recordat (Data.Text.Encoding.decodeUtf8 "source")) result
+   return result
+  where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        
 
 
---------------------------------------------------------------
----  retrieve all data 
---------------------------------------------------------------
 
-      
+toNode :: Database.Bolt.Record -> IO Database.Bolt.Node
+toNode r = r `Database.Bolt.at` "n" >>= Database.Bolt.exact
 
-
-
-
+recordat :: Monad m => Text ->  Record -> m Neo.Value
+recordat key record = case key `M.lookup` record of
+                  Just result -> return result
+                  Nothing     -> fail $ "No such key (" Data.List.++ show key Data.List.++ ") in record"

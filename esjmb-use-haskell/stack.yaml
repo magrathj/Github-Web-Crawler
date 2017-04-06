@@ -53,7 +53,18 @@ packages:
   
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
-extra-deps: []
+extra-deps: 
+- classy-prelude-1.2.0.1
+- classy-prelude-conduit-1.2.0
+- classy-prelude-yesod-1.2.0
+- hasbolt-0.1.0.9
+- load-env-0.1.1
+- aeson-0.11.3.0
+- hoauth2-0.5.4.0
+- http-client-0.4.31.2
+- http-client-tls-0.2.4.1
+- http-conduit-2.1.11
+- yesod-auth-oauth2-0.2.2
 
 
 # Override default flag values for local packages and extra-deps

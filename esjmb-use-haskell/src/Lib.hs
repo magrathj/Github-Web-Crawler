@@ -40,6 +40,7 @@ import           Control.Monad.Trans.Except   (ExceptT)
 import           Control.Monad.Trans.Resource
 import           Data.Aeson
 import           Data.Aeson.TH
+import           Data.Maybe
 import           Data.Bson.Generic
 import qualified Data.ByteString.Lazy         as L
 import qualified Data.List                    as DL
@@ -47,6 +48,11 @@ import           Data.Maybe                   (catMaybes)
 import           Data.Text                    (pack, unpack)
 import           Data.Time.Clock              (UTCTime, getCurrentTime)
 import           Data.Time.Format             (defaultTimeLocale, formatTime)
+import           Data.Text
+import           Data.List
+import qualified Data.Map as DM
+import           Data.Text.Encoding
+import           Data.Vector as V hiding (mapM)
 import           Database.MongoDB
 import           GHC.Generics
 import           Network.HTTP.Client          (defaultManagerSettings,
@@ -65,6 +71,18 @@ import           System.Log.Handler.Simple
 import           System.Log.Handler.Syslog
 import           System.Log.Logger
 import           UseHaskellAPI
+import           GitHub.Data as GHD
+import           GitHub.Data.Repos as GHDR
+import qualified GitHub
+import qualified GitHub.Endpoints.Repos as Github
+import qualified GitHub.Endpoints.Users.Followers as GithubUsers
+import qualified GitHub.Endpoints.Users as GithubUser
+import           GitHub as MainGitHub
+import           GitHub.Data as GHD
+import           GitHub.Data.Content as GHDC
+import           GitHub.Data.Repos as GHDR
+import           GitHub.Data.Name as GHDN
+import           Database.Bolt
 
 
 
@@ -77,9 +95,6 @@ startApp = withLogging $ \ aplogger -> do
   let settings = setPort 8080 $ setLogger aplogger defaultSettings
   runSettings settings app
 
--- this is the original startApp that stack new servant builds
---startApp :: IO ()
---startApp = run 8080 app
 
 taskScheduler :: Int -> IO ()
 taskScheduler delay = do
@@ -95,52 +110,197 @@ app = serve api server
 api :: Proxy API
 api = Proxy
 
--- | And now we implement the REST service by matching the API type, providing a Handler method for each endpoint
--- defined in the API type. Normally we would implement each endpoint using a unique method definition, but this need
--- not be so. To add a news endpoint, define it in type API above, and add and implement a handler here.
+
 server :: Server API
 server =  getREADME
    
   where
-   
 
-
+---------------------------------------------------------------------------
+---   get Function
+---------------------------------------------------------------------------  
     getREADME :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
     getREADME = liftIO $ do
       [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
       s       <- readFile rPath
       return $ ResponseData s
 
-   
-   
+---------------------------------------------------------------------------
+---   post Function
+---------------------------------------------------------------------------  
+   -- initialize :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
+   -- initialize = liftIO $ do
+   --   [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
+   --   s       <- readFile rPath
+   --   return $ ResponseData s
 
+
+
+
+
+
+
+
+   
+-----------------------------------------------------------------------------------------------------------------------------
+---  CRAWLER FUNCTIONS -> grab data functions 
+-----------------------------------------------------------------------------------------------------------------------------  
+---------------------------------------------------------------------------
+---   Format follower data
+---------------------------------------------------------------------------  
+data Reps = Reps{
+        follower_name      :: Text
+}deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
+follower_Rep_Text :: Reps -> Text  
+follower_Rep_Text (Reps follower) = follower
+
+formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
+formatUser auth repo = do
+             let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
+	         --crawler auth any 
+             return (Reps any)
+
+---------------------------------------------------------------------------
+---   Follower data
+---------------------------------------------------------------------------
+followers ::  Maybe GHD.Auth -> Text -> IO[Reps] 
+followers auth uname = do
+    possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
+    case possibleUsers of
+        (Left error)  -> return ([Reps (Data.Text.Encoding.decodeUtf8 "Error")])
+	(Right  repos) -> do
+           x <- mapM (formatUser auth) repos
+           return (V.toList x)
+
+---------------------------------------------------------------------------
+---   User specific data functions 
+---------------------------------------------------------------------------  
+data UserInfo = UserInfo{
+    user_name :: Text,
+    user_url :: Text,
+    user_location ::Text
+}deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
+
+formatUserInfo ::  GithubUser.User -> IO(UserInfo)
+formatUserInfo user = do
+         let userName =  GithubUser.userName user
+         let logins =  GithubUser.userLogin user
+	 let htmlUrl = GithubUser.userHtmlUrl user
+	 let htmlUser = GithubUser.getUrl htmlUrl
+	 let login =  GithubUser.untagName logins
+	 let location = GithubUser.userLocation user
+	 let userlocation = fromMaybe "" location
+         return (UserInfo login htmlUser userlocation)
+
+
+-----------------------------------------------
+--Show users details function 
+-----------------------------------------------
+showUsers ::  Text -> Maybe GHD.Auth -> IO(UserInfo)
+showUsers uname auth  = do
+  --let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
+  possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
+  case possibleUser of
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
+	(Right use)   -> do
+           x <- formatUserInfo use
+           return x
+
+
+
+
+-----------------------------------------------------------------
+--  Crawler function 
+----------------------------------------------------------------
+crawler ::  Maybe GHD.Auth -> Text -> IO()
+crawler auth unamez = do
+  if (Data.Text.null unamez) == True then return ()
+   else do
+      checkDB <- lookupNodeNeo unamez
+      case checkDB of
+        False -> return()   -- Isnt empty, so already there
+        True -> do
+	      inputDB <-  liftIO $ testFunction unamez
+              let followings = followers auth unamez
+	      followings2 <- liftIO $ followings
+	      let follow_text = Data.List.map follower_Rep_Text followings2
+	      input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
+              return ()
      
+-----------------------------------------------------------------------------------------------------------------------------
+---  DATABASE FUNCTIONS -> NEO4j DB
+-----------------------------------------------------------------------------------------------------------------------------
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertFollowers :: Text -> Text -> IO [Record]
+insertFollowers userName userFollowers = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   Database.Bolt.close pipe
+   return result
+ where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:User {follower: {userFollowers}}) MERGE (n)-[r:RELATES]->(w) RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
+
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+testFunction :: Text ->  IO [Record]
+testFunction userName = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   Database.Bolt.close pipe
+   return result
+ where cypher = "CREATE (n:User {name: {userName}}) RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName)]
+
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertFollower :: Text -> Text -> IO [Record]
+insertFollower userName userFollowers = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   Database.Bolt.close pipe
+   return result
+ where cypher = "MATCH (n { name: {userName} }) SET n += {followers: {userFollowers}} RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
+
+
+--------------------------------------------------------------
+---  Return boolean for match of data
+--------------------------------------------------------------
+lookupNodeNeo :: Text -> IO Bool
+lookupNodeNeo userName = do
+  let neo_conf = Database.Bolt.def { Database.Bolt.user = "neo4j", Database.Bolt.password = "09/12/1992" }
+  neo_pipe <- Database.Bolt.connect $ neo_conf 
+
+  -- -- Check node
+  records <- Database.Bolt.run neo_pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+
+  Database.Bolt.close neo_pipe
+
+  let isEmpty = Data.List.null records
+  return isEmpty
+
+ where cypher = "MATCH (n { name: {userName} })RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName)]
+
+
+
+
+
+
+
    
-    doRest :: ([String] -> [String]) -> IO ResponseData
-    doRest flt = do
-      -- first we perform the call to hackage.org, then we will extract the package names and filter
-      -- to include only package names matching the 'filt' parameter, returning a comma separated string of those
-      -- packages.
-      res <- SC.runClientM getPackages =<< env   -- the actual REST call
-      case res of
-        Left err -> do
-          warnLog $ "Rest call failed with error: " ++ show err
-          return $ ResponseData $ "Rest call failed with error: " ++ show err
-        Right pkgs -> do
-          return $ ResponseData $ DL.intercalate ", " $                          -- reduce to comma separated string
-                                  flt $                                          -- run the filtering function
-                                  DL.map (unpack . RestClient.packageName) pkgs  -- extract name and convert to string
-      where env = do
-             manager <- newManager defaultManagerSettings
-             return (SC.ClientEnv manager (SC.BaseUrl SC.Http "hackage.haskell.org" 80 ""))
-
-
--- What follows next is some helper function code that makes it easier to do warious things such as use
--- a mongoDB, post console log statements define environment variables for use in your programmes and so forth.
--- The code is not written particularly to be understood by novice Haskellers, but should be useable relatively easily
--- as set out above.
-
--- | error stuff
+-----------------------------------------------------------------------------------------------------------------------------
+---  LOGGING FUNCTIONS 
+-----------------------------------------------------------------------------------------------------------------------------  
+---------------------------------------------------------------------------
+---  Logging file stuff
+---------------------------------------------------------------------------
 custom404Error msg = err404 { errBody = msg }
 
 
@@ -157,7 +317,7 @@ noticeLog = doLog noticeM
 
 doLog f s = getProgName >>= \ p -> do
                 t <- getCurrentTime
-                f p $ (iso8601 t) ++ " " ++ s
+                f p $ (iso8601 t) DL.++ " " DL.++ s
 
 withLogging act = withStdoutLogger $ \aplogger -> do
 
@@ -171,51 +331,6 @@ withLogging act = withStdoutLogger $ \aplogger -> do
   act aplogger
 
 
--- | Mongodb helpers...
-
--- | helper to open connection to mongo database and run action
--- generally run as follows:
---        withMongoDbConnection $ do ...
---
-withMongoDbConnection :: Action IO a -> IO a
-withMongoDbConnection act  = do
-  ip <- mongoDbIp
-  port <- mongoDbPort
-  database <- mongoDbDatabase
-  pipe <- connect (host ip)
-  ret <- runResourceT $ liftIO $ access pipe master (pack database) act
-  close pipe
-  return ret
-
--- | helper method to ensure we force extraction of all results
--- note how it is defined recursively - meaning that draincursor' calls itself.
--- the purpose is to iterate through all documents returned if the connection is
--- returning the documents in batch mode, meaning in batches of retruned results with more
--- to come on each call. The function recurses until there are no results left, building an
--- array of returned [Document]
-drainCursor :: Cursor -> Action IO [Document]
-drainCursor cur = drainCursor' cur []
-  where
-    drainCursor' cur res  = do
-      batch <- nextBatch cur
-      if null batch
-        then return res
-        else drainCursor' cur (res ++ batch)
-
--- | Environment variable functions, that return the environment variable if set, or
--- default values if not set.
-
--- | The IP address of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbIp :: IO String
-mongoDbIp = defEnv "MONGODB_IP" id "database" True
-
--- | The port number of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbPort :: IO Integer
-mongoDbPort = defEnv "MONGODB_PORT" read 27017 False -- 27017 is the default mongodb port
-
--- | The name of the mongoDB database that devnostics-rest uses to store and access data
-mongoDbDatabase :: IO String
-mongoDbDatabase = defEnv "MONGODB_DATABASE" id "USEHASKELLDB" True
 
 -- | Determines log reporting level. Set to "DEBUG", "WARNING" or "ERROR" as preferred. Loggin is
 -- provided by the hslogger library.
@@ -236,10 +351,6 @@ defEnv :: Show a
 defEnv env fn def doWarn = lookupEnv env >>= \ e -> case e of
       Just s  -> return $ fn s
       Nothing -> do
-        when doWarn (doLog warningM $ "Environment variable: " ++ env ++
-                                      " is not set. Defaulting to " ++ (show def))
+        when doWarn (doLog warningM $ "Environment variable: " DL.++ env DL.++
+                                      " is not set. Defaulting to " DL.++ (show def))
         return def
-
-
-
-

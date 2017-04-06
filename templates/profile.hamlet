@@ -7,7 +7,7 @@
       This page is protected and access is allowed only for authenticated users.
 
     <p>
-      OAuth token <strong><span class="username">#{show crawl}</span></strong>!
+      OAuth token <strong><span class="username">#{show crawls}</span></strong>!
 
     
 <div>
