@@ -1,7 +1,7 @@
-<div .ui.container>
+<div .ui.container="">
 
-    <h1>
-      Access granted!
+  <h1>
+    Access granted!
 
     <p>
       This page is protected and access is allowed only for authenticated users.
@@ -9,7 +9,6 @@
     <p>
       OAuth token <strong><span class="username">#{show crawls}</span></strong>!
 
-    
 <div>
-<!-- load the d3.js library -->    
+<!-- load the d3.js library -->
 <script src="http://d3js.org/d3.v3.min.js"></script>

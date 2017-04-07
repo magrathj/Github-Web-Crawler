@@ -34,6 +34,8 @@ import GitHub.Data.Content as GHDC
 import GitHub.Data.Repos as GHDR
 import GitHub.Data.Name as GHDN
 import Data.Bson.Generic
+import Data.Bits
+import Data.Char
 import qualified Data.Map as M hiding (split)
 import Data.Text.IO as T (putStrLn)
 import Control.Monad (when, liftM)
@@ -42,13 +44,14 @@ import Data.Text
 import qualified Data.Map as DM
 import qualified Database.Bolt as Neo
 import qualified Data.Text as DT
+import GHC.Generics
 
-data Rep = Rep{
+data Reps = Reps{
         follower_name      :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
-follower_Rep_Text :: Rep -> Text  
-follower_Rep_Text (Rep follower) = follower
+follower_Rep_Text :: Reps -> Text  
+follower_Rep_Text (Reps follower) = follower
 
 
 
@@ -90,9 +93,10 @@ getProfileR = do
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	let crawl = Data.List.head $ Data.List.map follower_Rep_Text follow
-	crawls <- liftIO $ getNodesWithLinks 
-	liftIO $ crawler auth crawl --(En.decodeUtf8 (fromJust uname))
+	let crawls = Data.List.head $ Data.List.map follower_Rep_Text follow
+	--crawls <- liftIO $ getNode 
+	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))   --crawl 
+	liftIO $ setRelationships
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -134,11 +138,11 @@ readme owner = do
 -------------------------------------------------------------------
 -- Following function - returns data types rep for easy printing
 --------------------------------------------------------------------
-followers ::  Maybe GHD.Auth -> Text -> IO[Rep] 
+followers ::  Maybe GHD.Auth -> Text -> IO[Reps] 
 followers auth uname = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowingR (mkUserName uname) GitHub.FetchAll 
     case possibleUsers of
-        (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
+        (Left error)  -> return ([Reps (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
            x <- mapM (formatUser auth) repos
            return (V.toList x)
@@ -146,11 +150,11 @@ followers auth uname = do
 ----------------------------------------------------------------
 -- Followers function - returns data types rep for easy printing
 ----------------------------------------------------------------
-followers' ::  Text -> Maybe GHD.Auth -> IO[Rep] 
+followers' ::  Text -> Maybe GHD.Auth -> IO[Reps] 
 followers' uname auth  = do
     possibleUsers <- GitHub.executeRequestMaybe auth $ GitHub.usersFollowedByR (mkUserName uname) GitHub.FetchAll 
     case possibleUsers of
-        (Left error)  -> return ([Rep (Data.Text.Encoding.decodeUtf8 "Error")])
+        (Left error)  -> return ([Reps (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
            x <- mapM (formatUsers auth) repos
            return (V.toList x)
@@ -160,19 +164,19 @@ followers' uname auth  = do
 ----------------------------------------------
 -- Format user info into Rep data type [CRAWLER]
 ---------------------------------------------
-formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
+formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
 formatUser auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
 	     crawler auth any 
-             return (Rep any)
+             return (Reps any)
 
 ----------------------------------------------
 -- Format user info into Rep data type [Followering]
 ---------------------------------------------
-formatUsers ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Rep)
+formatUsers ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
 formatUsers auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
-             return (Rep any)
+             return (Reps any)
 
 
 
@@ -270,7 +274,7 @@ insertFollowers userName userFollowers = do
    result <- run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
    close pipe
    return result
- where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:User {follower: {userFollowers}}) MERGE (n)-[r:RELATES]->(w) RETURN n"
+ where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:Fol {name: {userFollowers}}) MERGE (n)<-[r:FOLLOWS]-(w) RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
 
 
@@ -307,13 +311,46 @@ getNodesWithLinks = do
    return result
   where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         
+data Node = Node{
+  name :: Text
+} deriving(ToJSON, FromJSON, Generic, Eq, Show)
+--instance FromBSON String
+--instance ToBSON String
 
 
+getNode :: IO Handler.Profile.Node
+getNode = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   close pipe
+   let first = Data.List.head result
+   cruise <- first `at` "source" >>= exact :: IO Text
+   return $ Handler.Profile.Node cruise
+  where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        
 
-toNode :: Database.Bolt.Record -> IO Database.Bolt.Node
-toNode r = r `Database.Bolt.at` "n" >>= Database.Bolt.exact
+setRelationships :: IO ()
+setRelationships = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   close pipe
+   return ()
+  where cypher = "MATCH (n:User) MATCH (m:Fol ) WHERE n.name = m.name MERGE (n)-[:FOLLOWS]->(m)"
 
-recordat :: Monad m => Text ->  Record -> m Neo.Value
-recordat key record = case key `M.lookup` record of
-                  Just result -> return result
-                  Nothing     -> fail $ "No such key (" Data.List.++ show key Data.List.++ ") in record"
+setFriendshipRelationships :: IO ()
+setFriendshipRelationships = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   close pipe
+   return ()
+  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name CREATE (a)-[r:FRIENDS]->(c)"
+
+getFriends :: IO()
+getFriends = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   close pipe
+   return ()
+ where cypher = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN n,r,p"
+
+
