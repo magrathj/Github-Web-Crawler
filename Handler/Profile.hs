@@ -97,6 +97,7 @@ getProfileR = do
 	--crawls <- liftIO $ getNode 
 	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))   --crawl 
 	liftIO $ setRelationships
+	liftIO $ setFriendshipRelationships
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 
@@ -211,12 +212,16 @@ crawler auth unamez = do
       case checkDB of
         False -> return()   -- Isnt empty, so already there
         True -> do
-	      inputDB <-  liftIO $ testFunction unamez
-              let followings = followers auth unamez
-	      followings2 <- liftIO $ followings
-	      let follow_text = Data.List.map follower_Rep_Text followings2
-	      input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
-              return ()
+	       inputDB <-  liftIO $ testFunction unamez
+               let followings = followers auth unamez
+	       followings2 <- liftIO $ followings
+               let follow_text = Data.List.map follower_Rep_Text followings2		  
+               let checkList = Data.List.null followings2
+               case checkList of 
+		           True -> return ()
+			   False -> do
+			        input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
+                                return ()
      
  
 
@@ -343,7 +348,7 @@ setFriendshipRelationships = do
    result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
    close pipe
    return ()
-  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name CREATE (a)-[r:FRIENDS]->(c)"
+  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name CREATE UNIQUE (a)-[r:FRIENDS]->(c)"
 
 getFriends :: IO()
 getFriends = do
