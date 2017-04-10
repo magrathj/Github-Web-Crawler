@@ -90,6 +90,7 @@ library
                  , wai-logger                    >= 2.2        && < 2.4
                  , file-embed
                  , safe
+                 , servant
                  , unordered-containers
                  , containers
                  , vector
@@ -98,7 +99,11 @@ library
                  , wai
                  , github
                  , utf8-string
+                 , use-haskell-api
+                 , servant-client
+                 , servant-server                 
                  , hasbolt
+                 , http-client
 
 executable         GithubOAuth
     if flag(library-only)

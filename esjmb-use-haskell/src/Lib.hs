@@ -95,7 +95,8 @@ api = Proxy
 
 
 server :: Server API
-server =  getREADME
+server =  getREADME :<|>
+          initialize
    
   where
 
@@ -111,11 +112,14 @@ server =  getREADME
 ---------------------------------------------------------------------------
 ---   post Function
 ---------------------------------------------------------------------------  
-   -- initialize :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
-   -- initialize = liftIO $ do
-   --   [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
-   --   s       <- readFile rPath
-   --   return $ ResponseData s
+    initialize :: StartCrawl -> Handler ResponseData -- fns with no input, second getREADME' is for demo below
+    initialize (StartCrawl s) = liftIO $ do
+       warnLog "I got this far--------------------------------------------------"
+       case s of
+	      "y" -> do
+		     return $ ResponseData "correct"
+              "n" -> do
+		     return $ ResponseData "incorrect"
 
 
 

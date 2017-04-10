@@ -45,7 +45,13 @@ import qualified Data.Map as DM
 import qualified Database.Bolt as Neo
 import qualified Data.Text as DT
 import GHC.Generics
-
+import qualified Servant as S
+import Servant.API
+import Servant.Client
+import qualified Servant.Server as SS
+import UseHaskellAPI
+import Network.HTTP.Client (newManager, defaultManagerSettings)
+import Prelude (read)
 
 data Reps = Reps{
         follower_name      :: Text
@@ -82,6 +88,7 @@ data UserInfo = UserInfo{
 	user_company :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+
 getUserName :: UserInfo -> Text
 getUserName (UserInfo name _ _ _ _) = name
 
@@ -98,6 +105,34 @@ getUserCompany :: UserInfo -> Text
 getUserCompany (UserInfo _ _ _ _ com) = com
 
 ----------------------------------------------
+--  Declare Crawler API
+----------------------------------------------
+
+crawlerport :: String
+crawlerport = "8080"
+
+crawlerhost :: String
+crawlerhost = "localhost"
+
+----------------------------------------------
+--  Declare Crawler API
+----------------------------------------------
+
+restAPI :: S.Proxy API
+restAPI = S.Proxy
+
+
+
+
+getREADME   :: ClientM ResponseData
+initialize  :: StartCrawl -> ClientM ResponseData
+
+
+
+(getREADME :<|> initialize) = client restAPI 
+
+
+----------------------------------------------
 --  Profile Handler
 ----------------------------------------------
 getProfileR :: Handler Html
@@ -109,14 +144,25 @@ getProfileR = do
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	let crawls = Data.List.head $ Data.List.map follower_Rep_Text follow
+	--let crawls = Data.List.head $ Data.List.map follower_Rep_Text follow
 	--crawls <- liftIO $ getNode 
 	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))   --crawl 
+        crawls <- liftIO $ getNode
 	liftIO $ setRelationships
 	liftIO $ setFriendshipRelationships
+        liftIO $ makeApiCall 
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
+		
 
+makeApiCall ::  IO ()
+makeApiCall = liftIO $ do
+  manager <- Network.HTTP.Client.newManager Network.HTTP.Client.defaultManagerSettings
+  res <- runClientM (initialize (StartCrawl "y")) (ClientEnv manager (BaseUrl Http crawlerhost (read(crawlerport) :: Int) ""))
+  case res of
+    Left err -> Import.putStrLn $ "Error: "
+    Right response -> return ()
+	
 
 ------------------------------------------------------------------------------
 -- Get user's repo data taking in user's name
@@ -363,16 +409,19 @@ data Node = Node{
 --instance ToBSON String
 
 
-getNode :: IO Handler.Profile.Node
+getNode :: IO [Handler.Profile.Node]
 getNode = do
    pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
    result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
    close pipe
-   let first = Data.List.head result
-   cruise <- first `at` "source" >>= exact :: IO Text
-   return $ Handler.Profile.Node cruise
+   cruise <- mapM extractNode result
+   return cruise
   where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
-        
+
+extractNode :: Record -> IO Handler.Profile.Node        
+extractNode input = do 
+   cruise <- input `at` "source" >>= exact :: IO Text
+   return $ Handler.Profile.Node cruise
 
 setRelationships :: IO ()
 setRelationships = do

@@ -20,10 +20,11 @@ restAPI = Proxy
 -- Each function matches one of the endpoints in type API from UseHaskellAPI.hs
 
 
-getREADME :: ClientM ResponseData
+getREADME   :: ClientM ResponseData
+initialize  :: StartCrawl -> ClientM ResponseData
 
 
 -- | The following provides the implementations of these types
 -- Note that the order of the functions must match the endpoints in the type API from UseHaskell.hs
 
-(getREADME) = client restAPI
+(getREADME :<|> initialize) = client restAPI 

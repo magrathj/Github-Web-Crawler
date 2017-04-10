@@ -20,17 +20,20 @@ import           Servant
 
 data Message = Message { name    :: String
                        , message :: String
-                       } deriving (Show, Generic, FromJSON, ToJSON, ToBSON, FromBSON)
+                       } deriving (Show, Generic, FromJSON, ToJSON)
 
-deriving instance FromBSON String  -- we need these as BSON does not provide
-deriving instance ToBSON   String
+
 
 -- | We will also define a simple data type for returning data from a REST call, again with nothing special or
 -- particular in the response, but instead merely as a demonstration.
 
 data ResponseData = ResponseData { response :: String
-                                 } deriving (Generic, ToJSON, FromJSON,FromBSON, Show)
+                                 } deriving (Generic, ToJSON, FromJSON, Show)
+
+data StartCrawl = StartCrawl     { start :: String
+                                 } deriving (Generic, ToJSON, FromJSON, Show)
 
 
 type API = "getREADME"                  :> Get '[JSON] ResponseData
+      :<|> "initialize"                 :> ReqBody '[JSON] StartCrawl  :> Post '[JSON] ResponseData
      

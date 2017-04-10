@@ -2,6 +2,7 @@ flags: {}
 extra-package-dbs: []
 packages:
 - '.'
+- C:\Users\MAGRATHJ\GithubOAuth\esjmb-use-haskell-api
 
 extra-deps:
 - hasbolt-0.1.0.9
