@@ -29,14 +29,7 @@ import           GitHub.Data.Content as GHDC
 import           GitHub.Data.Repos as GHDR
 import           GitHub.Data.Name as GHDN
 
-data Message = Message { name    :: String
-                       , message :: String
-                       } deriving (Show, Generic, FromJSON, ToJSON)
 
-
-
--- | We will also define a simple data type for returning data from a REST call, again with nothing special or
--- particular in the response, but instead merely as a demonstration.
 
 data ResponseData = ResponseData { response :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
@@ -45,7 +38,23 @@ data StartCrawl = StartCrawl     { start :: Text
                                   ,authentication :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
+data Node = Node{
+                   name :: Text,
+				   group :: Text
+} deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
+data Links = Links{
+                 source :: Text,
+                 target :: Text,
+                  value :: Text
+}deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
+
+data SocialGraph = SocialGraph{   nodes :: [Node],
+	                              links :: [Links]
+                               }deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
 
 type API = "getREADME"                  :> Get '[JSON] ResponseData
       :<|> "initialize"                 :> ReqBody '[JSON] StartCrawl  :> Post '[JSON] ResponseData
-     
+      :<|> "getGraph"                   :> Get '[JSON] ResponseData 

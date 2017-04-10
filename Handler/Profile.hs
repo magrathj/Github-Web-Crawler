@@ -86,10 +86,10 @@ restAPI = S.Proxy
 
 getREADME   :: ClientM ResponseData
 initialize  :: StartCrawl -> ClientM ResponseData
+getGraph   :: ClientM ResponseData
 
 
-
-(getREADME :<|> initialize) = client restAPI 
+(getREADME :<|> initialize :<|> getGraph) = client restAPI 
 
 
 ----------------------------------------------
@@ -149,23 +149,33 @@ formatUsers auth repo = do
 -------------------------------------------------------------
 -- Grab data from the database
 ------------------------------------------------------------      
-data Node = Node{
-  name :: Text
-} deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
-getNode :: IO [Handler.Profile.Node]
+getNode :: IO SocialGraph
 getNode = do
    pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
    result <- run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
    close pipe
-   cruise <- mapM extractNode result
-   return cruise
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
   where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n) OPTIONAL MATCH path=(n)-[r*1..2]-(c) where NONE( rel in r WHERE type(rel)='KNOWS') RETURN DISTINCT c.name as name, HEAD(LABELS(c)) as group"
 
-extractNode :: Record -> IO Handler.Profile.Node        
+
+
+extractNode :: Record -> IO UseHaskellAPI.Node        
 extractNode input = do 
-   cruise <- input `at` "source" >>= exact :: IO Text
-   return $ Handler.Profile.Node cruise
+   cruise1 <- input `at` "name" >>= exact :: IO Text
+   cruise2 <- input `at` "group" >>= exact :: IO Text
+   return $ UseHaskellAPI.Node cruise1 cruise2
 
 
+
+extractLink :: Record -> IO Links        
+extractLink input = do 
+   cruise1 <- input `at` "source" >>= exact :: IO Text
+   cruise2 <- input `at` "target" >>= exact :: IO Text   
+   cruise3 <- input `at` "type" >>= exact :: IO Text
+   return $ Links cruise1 cruise2 cruise3
 

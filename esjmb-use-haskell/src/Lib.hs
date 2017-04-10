@@ -96,9 +96,10 @@ api = Proxy
 
 
 server :: Server API
-server =  getREADME :<|>
-          initialize
-   
+server =  getREADME  :<|>
+          initialize :<|>
+          getGraph
+
   where
 
 ---------------------------------------------------------------------------
@@ -127,14 +128,17 @@ server =  getREADME :<|>
                if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
 	            else return $ ResponseData "incorrect"
 
+---------------------------------------------------------------------------
+---   get Graph Function
+---------------------------------------------------------------------------  
+    getGraph :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
+    getGraph = liftIO $ do
+      warnLog "here!!!!!!!!!!"
+      let s = "hey"
+      return $ ResponseData s
 
 
 
-
-
-
-
-   
 -----------------------------------------------------------------------------------------------------------------------------
 ---  CRAWLER FUNCTIONS -> grab data functions 
 -----------------------------------------------------------------------------------------------------------------------------  
