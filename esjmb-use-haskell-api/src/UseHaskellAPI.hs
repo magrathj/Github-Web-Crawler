@@ -57,4 +57,4 @@ data SocialGraph = SocialGraph{   nodes :: [Node],
 
 type API = "getREADME"                  :> Get '[JSON] ResponseData
       :<|> "initialize"                 :> ReqBody '[JSON] StartCrawl  :> Post '[JSON] ResponseData
-      :<|> "getGraph"                   :> Get '[JSON] ResponseData 
+      :<|> "getGraph"                   :> Get '[JSON] SocialGraph 

@@ -9,10 +9,10 @@
     <p>
       OAuth token <strong><span class="username">#{show crawls}</span></strong>!
 
-    <input type="button" value="Social Graph" id="MyButton" onclick="SocialGraph(#{show uname});">
-    
+    <input type="button" value="Social Graph" id="MyButton" onclick="SocialGraph();">
 
-      
-<div>
-<!-- load the d3.js library -->
-<script src="http://d3js.org/d3.v3.min.js"></script>
+
+
+   <svg width="960" height="600">
+   <script src="https://d3js.org/d3.v4.min.js">
+   <script>

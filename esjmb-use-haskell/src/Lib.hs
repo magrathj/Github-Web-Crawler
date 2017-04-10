@@ -131,11 +131,50 @@ server =  getREADME  :<|>
 ---------------------------------------------------------------------------
 ---   get Graph Function
 ---------------------------------------------------------------------------  
-    getGraph :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
+    getGraph :: Handler SocialGraph 
     getGraph = liftIO $ do
-      warnLog "here!!!!!!!!!!"
-      let s = "hey"
-      return $ ResponseData s
+      warnLog "Getting Graph Data!!!!!"  
+      graph <- getNode
+      return graph
+
+
+ 
+-------------------------------------------------------------
+-- Grab data from the database
+------------------------------------------------------------      
+
+getNode :: IO SocialGraph
+getNode = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n) OPTIONAL MATCH path=(n)-[r*1..2]-(c) where NONE( rel in r WHERE type(rel)='KNOWS') RETURN DISTINCT c.name as name, HEAD(LABELS(c)) as group"
+
+
+
+extractNode :: Record -> IO UseHaskellAPI.Node        
+extractNode input = do 
+   cruise1 <- input `Database.Bolt.at` "name" >>= exact :: IO Text
+   cruise2 <- input `Database.Bolt.at` "group" >>= exact :: IO Text
+   return $ UseHaskellAPI.Node cruise1 cruise2
+
+
+
+extractLink :: Record -> IO Links        
+extractLink input = do 
+   cruise1 <- input `Database.Bolt.at` "source" >>= exact :: IO Text
+   cruise2 <- input `Database.Bolt.at` "target" >>= exact :: IO Text   
+   cruise3 <- input `Database.Bolt.at` "type" >>= exact :: IO Text
+   return $ Links cruise1 cruise2 cruise3
+
+
+
+
 
 
 

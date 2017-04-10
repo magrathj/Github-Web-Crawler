@@ -1,7 +1,7 @@
-function SocialGraph(username) {
+function SocialGraph() {
   d3.select("svg").selectAll("*").remove();
   var responsei = $.ajax({
-          url: "http://localhost:8081/socialGraph/".concat(username),
+          url: "http://localhost:8080/getGraph",
           type: "get",
           contentType: "text/plain",
           dataType: "json",
