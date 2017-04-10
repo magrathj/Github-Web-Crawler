@@ -76,10 +76,25 @@ data RepoContent = RepoContent{
 data UserInfo = UserInfo{
     user_name :: Text,
     user_url :: Text,
-    user_location ::Text
+    user_location ::Text,
+	user_email :: Text,
+	user_company :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+getUserName :: UserInfo -> Text
+getUserName (UserInfo name _ _ _ _) = name
 
+getUserUrl :: UserInfo -> Text
+getUserUrl (UserInfo _ url _ _ _) = url
+
+getUserLocation :: UserInfo -> Text
+getUserLocation (UserInfo _ _ loc _ _) = loc
+
+getUserEmail :: UserInfo -> Text
+getUserEmail (UserInfo _ _ _ em _) = em
+
+getUserCompany :: UserInfo -> Text
+getUserCompany (UserInfo _ _ _ _ com) = com
 
 ----------------------------------------------
 --  Profile Handler
@@ -192,7 +207,7 @@ showUsers uname auth  = do
   --let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
-        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
@@ -213,9 +228,16 @@ crawler auth unamez = do
         False -> return()   -- Isnt empty, so already there
         True -> do
 	       inputDB <-  liftIO $ testFunction unamez
+               userDets <- liftIO $ showUsers unamez auth	
+               let userLogin = getUserName userDets
+               let userUrl = getUserUrl userDets
+               let userLocation = getUserLocation userDets
+               let userEmail = getUserEmail userDets
+               let userCompany = getUserCompany userDets
                let followings = followers auth unamez
 	       followings2 <- liftIO $ followings
-               let follow_text = Data.List.map follower_Rep_Text followings2		  
+               let follow_text = Data.List.map follower_Rep_Text followings2	
+               liftIO $ insertUserDets 	unamez userLogin userUrl userLocation userEmail userCompany		    
                let checkList = Data.List.null followings2
                case checkList of 
 		           True -> return ()
@@ -241,7 +263,11 @@ formatUserInfo user = do
 	 let login =  GithubUser.untagName logins
 	 let location = GithubUser.userLocation user
 	 let userlocation = fromMaybe "" location
-         return (UserInfo login htmlUser userlocation)
+	 let emailwithMaybe = GitHub.userEmail user
+	 let email = fromMaybe "" emailwithMaybe
+	 let companywtihMaybe = GitHub.userCompany user
+	 let company = fromMaybe "" companywtihMaybe
+         return (UserInfo login htmlUser userlocation email company)
   
 
 
@@ -269,6 +295,19 @@ insertFollower userName userFollowers = do
    return result
  where cypher = "MATCH (n { name: {userName} }) SET n += {followers: {userFollowers}} RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertUserDets :: Text -> Text -> Text -> Text -> Text -> Text -> IO ()
+insertUserDets userName userLogin userUrl userLocation userEmail userCompany = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   close pipe
+   return ()
+ where cypher = "MATCH (n { name: {userName} }) SET n += {location: {userLocation}} SET n += {url: {userUrl}} SET n += {Login: {userLogin}} SET n += {email: {userEmail}} SET n += {company: {userCompany}} RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userLocation", Database.Bolt.T userLocation),("userUrl", Database.Bolt.T userUrl),("userLogin", Database.Bolt.T userLogin),("userEmail", Database.Bolt.T userEmail),("userCompany", Database.Bolt.T userCompany)]
+
+
 
 --------------------------------------------------------------
 ---  add attribute to the database
