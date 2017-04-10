@@ -103,9 +103,11 @@ getProfileR = do
     	let access_token = lookup "access_token" sess
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
-	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname))
+	following <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
+	let firstFollowing = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text following 
+        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) firstFollowing                        --(DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname))
         crawls <- liftIO $ getNode
+        --let crawls = firstFollowing
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 		

@@ -117,11 +117,15 @@ server =  getREADME :<|>
     initialize (StartCrawl uname auth) = liftIO $ do
        warnLog (Data.Text.unpack uname)      
        let authentication = Just $ MainGitHub.OAuth $ (DBC.pack auth)
-       crawler authentication uname
-       setRelationships
-       setFriendshipRelationships   
-       if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
-	     else return $ ResponseData "incorrect"
+       checkDB <- lookupNodeNeo uname
+       case checkDB of
+            False ->  return $ ResponseData "already there"   -- Isnt empty, so already there
+            True -> do
+	       crawler authentication uname
+               setRelationships
+               setFriendshipRelationships   
+               if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
+	            else return $ ResponseData "incorrect"
 
 
 
@@ -144,9 +148,10 @@ data Reps = Reps{
 follower_Rep_Text :: Reps -> Text  
 follower_Rep_Text (Reps follower) = follower
 
-formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
-formatUser auth repo = do
+formatUser ::  Maybe GHD.Auth -> Text -> GithubUsers.SimpleUser ->IO(Reps)
+formatUser auth unamez repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
+             input2DB <- liftIO $ insertFollowers unamez any
              crawler auth any 
              return (Reps any)
 
@@ -162,7 +167,7 @@ followers auth uname = do
     case possibleUsers of
         (Left error)  -> return ([Reps (Data.Text.Encoding.decodeUtf8 "Error")])
 	(Right  repos) -> do
-           x <- mapM (formatUser auth) repos
+           x <- mapM (formatUser auth uname) repos
            return (V.toList x)
 
 ---------------------------------------------------------------------------
@@ -191,8 +196,8 @@ getUserEmail (UserInfo _ _ _ em _) = em
 getUserCompany :: UserInfo -> Text
 getUserCompany (UserInfo _ _ _ _ com) = com
 
-formatUserInfo ::  GithubUser.User -> IO(UserInfo)
-formatUserInfo user = do
+formatUserInfo ::  GithubUser.User -> Maybe GHD.Auth -> IO(UserInfo)
+formatUserInfo user auth = do
          let userName =  GithubUser.userName user
          let logins =  GithubUser.userLogin user
 	 let htmlUrl = GithubUser.userHtmlUrl user
@@ -203,7 +208,7 @@ formatUserInfo user = do
 	 let emailwithMaybe = GitHub.userEmail user
 	 let email = fromMaybe "" emailwithMaybe
 	 let companywtihMaybe = GitHub.userCompany user
-	 let company = fromMaybe "" companywtihMaybe
+	 let company = fromMaybe "" companywtihMaybe 
          return (UserInfo login htmlUser userlocation email company)
   
 
@@ -220,7 +225,7 @@ showUsers uname auth  = do
   case possibleUser of
         (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
-           x <- formatUserInfo use
+           x <- formatUserInfo use auth
            return x
 
 
@@ -245,16 +250,12 @@ crawler auth unamez = do
                let userLocation = getUserLocation userDets
                let userEmail = getUserEmail userDets
                let userCompany = getUserCompany userDets
-               let followings = followers auth unamez
+               liftIO $ insertUserDets 	unamez userLogin userUrl userLocation userEmail userCompany		
+               let followings = followers auth unamez               
 	       followings2 <- liftIO $ followings
-               let follow_text = Data.List.map follower_Rep_Text followings2	
-               liftIO $ insertUserDets 	unamez userLogin userUrl userLocation userEmail userCompany		    
-               let checkList = Data.List.null followings2
-               case checkList of 
-		           True -> return ()
-			   False -> do
-			        input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
-                                return ()
+               --let follow_text = Data.List.map follower_Rep_Text followings2	    
+               --input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
+               return ()
      
      
 -----------------------------------------------------------------------------------------------------------------------------
@@ -327,7 +328,7 @@ lookupNodeNeo userName = do
   let isEmpty = Data.List.null records
   return isEmpty
 
- where cypher = "MATCH (n { name: {userName} })RETURN n"
+ where cypher = "MATCH (n:User { name: {userName} })RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName)]
 
 
@@ -354,7 +355,7 @@ setFriendshipRelationships = do
    result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
    Database.Bolt.close pipe
    return ()
-  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name CREATE UNIQUE (a)-[r:FRIENDS]->(c)"
+  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name MERGE (a)-[r:FRIENDS]->(c)"
 
 getFriends :: IO()
 getFriends = do
