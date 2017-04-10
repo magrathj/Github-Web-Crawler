@@ -46,6 +46,7 @@ import qualified Database.Bolt as Neo
 import qualified Data.Text as DT
 import GHC.Generics
 
+
 data Reps = Reps{
         follower_name      :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)

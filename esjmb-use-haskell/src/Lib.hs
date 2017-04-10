@@ -1,11 +1,4 @@
--- This file is commented extensively for non-haskell programmers
 
--- | These are language extensions. Haskell has a great many language
--- extensions but in practice you do not need to knwo much about them. If you
--- use a library that needs them, then the library documentation will tell you which
--- extensions you neeed to include. If you try to write code that needs particular extensions,
--- then the haskell compiler is smart enough typically to be able to suggest which extensions
--- you should switch on by including an entry here.
 
 {-# LANGUAGE DataKinds            #-}
 {-# LANGUAGE DeriveAnyClass       #-}
@@ -18,20 +11,10 @@
 {-# LANGUAGE TypeOperators        #-}
 {-# LANGUAGE TypeSynonymInstances #-}
 
--- | Haskell code is structured as sets of functions that sit within Modules. The basic rule is that a module with a
--- particular name (for example Lib) sits within a .hs file of the same name (eg. Lib.hs). The module statement is of
--- the form `module MODULE_NAME (EXPORTED_FUNCTIONS) where`. Everything following this is part of the module. There are
--- no brackets or any other syntax to worry about.
 module Lib
     ( startApp
     ) where
 
--- | Imports work like most other languages and are essentially library includes. The functions of the lirbary become
--- immediately accessible in the code of the module. There are various ways in which imports can be modified. For
--- example, one may `import qualified X as Y` which imports a library in such a way that the functions of the library
--- must be prefixed with `Y.`. One can always prefix a libraries functions with the import string, when calling them.
--- You will occasionally have reason to import libraries that have common function names by coincidence. You can use
--- qualified imports of full prefixes to disambiguate. The compiler will tell you where the problem is if this occurs.
 
 import           Control.Concurrent           (forkIO, threadDelay)
 import           Control.Monad                (when)
@@ -158,8 +141,11 @@ follower_Rep_Text (Reps follower) = follower
 formatUser ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
 formatUser auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
-	         --crawler auth any 
+             crawler auth any 
              return (Reps any)
+
+
+
 
 ---------------------------------------------------------------------------
 ---   Follower data
@@ -179,9 +165,25 @@ followers auth uname = do
 data UserInfo = UserInfo{
     user_name :: Text,
     user_url :: Text,
-    user_location ::Text
+    user_location ::Text,
+	user_email :: Text,
+	user_company :: Text
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+getUserName :: UserInfo -> Text
+getUserName (UserInfo name _ _ _ _) = name
+
+getUserUrl :: UserInfo -> Text
+getUserUrl (UserInfo _ url _ _ _) = url
+
+getUserLocation :: UserInfo -> Text
+getUserLocation (UserInfo _ _ loc _ _) = loc
+
+getUserEmail :: UserInfo -> Text
+getUserEmail (UserInfo _ _ _ em _) = em
+
+getUserCompany :: UserInfo -> Text
+getUserCompany (UserInfo _ _ _ _ com) = com
 
 formatUserInfo ::  GithubUser.User -> IO(UserInfo)
 formatUserInfo user = do
@@ -192,7 +194,14 @@ formatUserInfo user = do
 	 let login =  GithubUser.untagName logins
 	 let location = GithubUser.userLocation user
 	 let userlocation = fromMaybe "" location
-         return (UserInfo login htmlUser userlocation)
+	 let emailwithMaybe = GitHub.userEmail user
+	 let email = fromMaybe "" emailwithMaybe
+	 let companywtihMaybe = GitHub.userCompany user
+	 let company = fromMaybe "" companywtihMaybe
+         return (UserInfo login htmlUser userlocation email company)
+  
+
+
 
 
 -----------------------------------------------
@@ -203,7 +212,7 @@ showUsers uname auth  = do
   --let uname = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text rep
   possibleUser <- GithubUser.userInfoFor' auth (mkUserName uname)
   case possibleUser of
-        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
+        (Left error)  -> return (UserInfo (Data.Text.Encoding.decodeUtf8 "Error")(Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error")( Data.Text.Encoding.decodeUtf8 "Error"))
 	(Right use)   -> do
            x <- formatUserInfo use
            return x
@@ -211,9 +220,10 @@ showUsers uname auth  = do
 
 
 
------------------------------------------------------------------
---  Crawler function 
-----------------------------------------------------------------
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
+-----  Crawler function 
+-----------------------------------------------------------------------------------------------------------------------------------------------------------
 crawler ::  Maybe GHD.Auth -> Text -> IO()
 crawler auth unamez = do
   if (Data.Text.null unamez) == True then return ()
@@ -222,12 +232,24 @@ crawler auth unamez = do
       case checkDB of
         False -> return()   -- Isnt empty, so already there
         True -> do
-	      inputDB <-  liftIO $ testFunction unamez
-              let followings = followers auth unamez
-	      followings2 <- liftIO $ followings
-	      let follow_text = Data.List.map follower_Rep_Text followings2
-	      input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
-              return ()
+	       inputDB <-  liftIO $ testFunction unamez
+               userDets <- liftIO $ showUsers unamez auth	
+               let userLogin = getUserName userDets
+               let userUrl = getUserUrl userDets
+               let userLocation = getUserLocation userDets
+               let userEmail = getUserEmail userDets
+               let userCompany = getUserCompany userDets
+               let followings = followers auth unamez
+	       followings2 <- liftIO $ followings
+               let follow_text = Data.List.map follower_Rep_Text followings2	
+               liftIO $ insertUserDets 	unamez userLogin userUrl userLocation userEmail userCompany		    
+               let checkList = Data.List.null followings2
+               case checkList of 
+		           True -> return ()
+			   False -> do
+			        input2DB <- liftIO $ mapM (insertFollowers unamez) follow_text
+                                return ()
+     
      
 -----------------------------------------------------------------------------------------------------------------------------
 ---  DATABASE FUNCTIONS -> NEO4j DB
@@ -241,7 +263,7 @@ insertFollowers userName userFollowers = do
    result <- Database.Bolt.run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
    Database.Bolt.close pipe
    return result
- where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:User {follower: {userFollowers}}) MERGE (n)-[r:RELATES]->(w) RETURN n"
+ where cypher = "MATCH (n:User { name: {userName} }) CREATE (w:Fol {name: {userFollowers}}) MERGE (n)<-[r:FOLLOWS]-(w) RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
 
 --------------------------------------------------------------
@@ -268,6 +290,20 @@ insertFollower userName userFollowers = do
  where cypher = "MATCH (n { name: {userName} }) SET n += {followers: {userFollowers}} RETURN n"
        params = DM.fromList [("userName", Database.Bolt.T userName),("userFollowers", Database.Bolt.T userFollowers)]
 
+--------------------------------------------------------------
+---  add attribute to the database
+--------------------------------------------------------------
+insertUserDets :: Text -> Text -> Text -> Text -> Text -> Text -> IO ()
+insertUserDets userName userLogin userUrl userLocation userEmail userCompany = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.queryP (Data.Text.pack cypher) params
+   Database.Bolt.close pipe
+   return ()
+ where cypher = "MATCH (n { name: {userName} }) SET n += {location: {userLocation}} SET n += {url: {userUrl}} SET n += {Login: {userLogin}} SET n += {email: {userEmail}} SET n += {company: {userCompany}} RETURN n"
+       params = DM.fromList [("userName", Database.Bolt.T userName),("userLocation", Database.Bolt.T userLocation),("userUrl", Database.Bolt.T userUrl),("userLogin", Database.Bolt.T userLogin),("userEmail", Database.Bolt.T userEmail),("userCompany", Database.Bolt.T userCompany)]
+
+
+
 
 --------------------------------------------------------------
 ---  Return boolean for match of data
@@ -289,6 +325,38 @@ lookupNodeNeo userName = do
        params = DM.fromList [("userName", Database.Bolt.T userName)]
 
 
+getNodesWithLinks :: IO [Record]
+getNodesWithLinks = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return result
+  where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        
+
+setRelationships :: IO ()
+setRelationships = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH (n:User) MATCH (m:Fol ) WHERE n.name = m.name MERGE (n)-[:FOLLOWS]->(m)"
+
+setFriendshipRelationships :: IO ()
+setFriendshipRelationships = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name CREATE UNIQUE (a)-[r:FRIENDS]->(c)"
+
+getFriends :: IO()
+getFriends = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+ where cypher = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN n,r,p"
 
 
 
