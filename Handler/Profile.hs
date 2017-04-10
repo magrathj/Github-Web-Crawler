@@ -25,6 +25,7 @@ import Data.Text hiding(intercalate, map, lookup)
 import Data.Text.Encoding as En
 import Prelude ()
 import Data.ByteString.Char8 as DBC hiding (unpack, putStrLn, find)
+import Data.ByteString.Char8 as DBC hiding (putStrLn)
 import qualified GitHub.Endpoints.Repos as Github
 import qualified GitHub.Endpoints.Users.Followers as GithubUsers
 import qualified GitHub.Endpoints.Users as GithubUser
@@ -141,22 +142,19 @@ getProfileR = do
     defaultLayout $ do
     	sess <- getSession
     	let access_token = lookup "access_token" sess
-        let auth_token = En.decodeUtf8 (fromJust access_token)
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	--let crawls = Data.List.head $ Data.List.map follower_Rep_Text follow
 	--crawls <- liftIO $ getNode 
 	liftIO $ crawler auth (En.decodeUtf8 (fromJust uname))   --crawl 
+        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname))
         crawls <- liftIO $ getNode
-	liftIO $ setRelationships
-	liftIO $ setFriendshipRelationships
-        liftIO $ makeApiCall auth_token (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 		
 
-makeApiCall ::  Text -> Text -> IO ()
+makeApiCall ::  String -> Text -> IO ()
 makeApiCall auth uname = liftIO $ do
   manager <- Network.HTTP.Client.newManager Network.HTTP.Client.defaultManagerSettings
   res <- runClientM (initialize (StartCrawl uname auth)) (ClientEnv manager (BaseUrl Http crawlerhost (read(crawlerport) :: Int) ""))

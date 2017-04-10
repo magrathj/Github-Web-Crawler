@@ -42,7 +42,7 @@ data ResponseData = ResponseData { response :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
 data StartCrawl = StartCrawl     { start :: Text
-                                  ,authentication :: Text
+                                  ,authentication :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
 

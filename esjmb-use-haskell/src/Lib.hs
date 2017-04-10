@@ -36,6 +36,7 @@ import           Data.List
 import qualified Data.Map as DM
 import           Data.Text.Encoding
 import           Data.Vector as V hiding (mapM)
+import           Data.ByteString.Char8 as DBC hiding (unpack, putStrLn, find)
 import           Database.MongoDB
 import           GHC.Generics
 import           Network.HTTP.Client          (defaultManagerSettings,
@@ -106,7 +107,7 @@ server =  getREADME :<|>
     getREADME :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
     getREADME = liftIO $ do
       [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
-      s       <- readFile rPath
+      s       <- Prelude.readFile rPath
       return $ ResponseData s
 
 ---------------------------------------------------------------------------
@@ -114,7 +115,11 @@ server =  getREADME :<|>
 ---------------------------------------------------------------------------  
     initialize :: StartCrawl -> Handler ResponseData -- fns with no input, second getREADME' is for demo below
     initialize (StartCrawl uname auth) = liftIO $ do
-       warnLog (Data.Text.unpack uname) 
+       warnLog (Data.Text.unpack uname)
+       setRelationships
+       setFriendshipRelationships   
+       let authentication = Just $ MainGitHub.OAuth $ (DBC.pack auth)
+       crawler authentication uname
        if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
 	     else return $ ResponseData "incorrect"
 
