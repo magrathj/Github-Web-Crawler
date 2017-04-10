@@ -15,8 +15,19 @@ import           Data.Aeson.TH
 import           Data.Bson.Generic
 import           GHC.Generics
 import           Servant
-
-
+import           Data.Text
+import           Data.Text.Encoding
+import           GitHub.Data as GHD
+import           GitHub.Data.Repos as GHDR
+import qualified GitHub
+import qualified GitHub.Endpoints.Repos as Github
+import qualified GitHub.Endpoints.Users.Followers as GithubUsers
+import qualified GitHub.Endpoints.Users as GithubUser
+import           GitHub as MainGitHub
+import           GitHub.Data as GHD
+import           GitHub.Data.Content as GHDC
+import           GitHub.Data.Repos as GHDR
+import           GitHub.Data.Name as GHDN
 
 data Message = Message { name    :: String
                        , message :: String
@@ -30,7 +41,8 @@ data Message = Message { name    :: String
 data ResponseData = ResponseData { response :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
-data StartCrawl = StartCrawl     { start :: String
+data StartCrawl = StartCrawl     { start :: Text
+                                  ,authentication :: Text
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
 

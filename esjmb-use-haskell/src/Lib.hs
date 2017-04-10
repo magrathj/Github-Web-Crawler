@@ -66,7 +66,7 @@ import           GitHub.Data.Content as GHDC
 import           GitHub.Data.Repos as GHDR
 import           GitHub.Data.Name as GHDN
 import           Database.Bolt
-
+import           Data.Text.Encoding
 
 
 startApp :: IO ()    -- set up wai logger for service to output apache style logging for rest calls
@@ -113,13 +113,10 @@ server =  getREADME :<|>
 ---   post Function
 ---------------------------------------------------------------------------  
     initialize :: StartCrawl -> Handler ResponseData -- fns with no input, second getREADME' is for demo below
-    initialize (StartCrawl s) = liftIO $ do
-       warnLog "I got this far--------------------------------------------------"
-       case s of
-	      "y" -> do
-		     return $ ResponseData "correct"
-              "n" -> do
-		     return $ ResponseData "incorrect"
+    initialize (StartCrawl uname auth) = liftIO $ do
+       warnLog (Data.Text.unpack uname) 
+       if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
+	     else return $ ResponseData "incorrect"
 
 
 

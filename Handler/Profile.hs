@@ -141,6 +141,7 @@ getProfileR = do
     defaultLayout $ do
     	sess <- getSession
     	let access_token = lookup "access_token" sess
+        let auth_token = En.decodeUtf8 (fromJust access_token)
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	follow <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
@@ -150,15 +151,15 @@ getProfileR = do
         crawls <- liftIO $ getNode
 	liftIO $ setRelationships
 	liftIO $ setFriendshipRelationships
-        liftIO $ makeApiCall 
+        liftIO $ makeApiCall auth_token (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 		
 
-makeApiCall ::  IO ()
-makeApiCall = liftIO $ do
+makeApiCall ::  Text -> Text -> IO ()
+makeApiCall auth uname = liftIO $ do
   manager <- Network.HTTP.Client.newManager Network.HTTP.Client.defaultManagerSettings
-  res <- runClientM (initialize (StartCrawl "y")) (ClientEnv manager (BaseUrl Http crawlerhost (read(crawlerport) :: Int) ""))
+  res <- runClientM (initialize (StartCrawl uname auth)) (ClientEnv manager (BaseUrl Http crawlerhost (read(crawlerport) :: Int) ""))
   case res of
     Left err -> Import.putStrLn $ "Error: "
     Right response -> return ()
