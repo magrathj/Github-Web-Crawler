@@ -115,11 +115,11 @@ server =  getREADME :<|>
 ---------------------------------------------------------------------------  
     initialize :: StartCrawl -> Handler ResponseData -- fns with no input, second getREADME' is for demo below
     initialize (StartCrawl uname auth) = liftIO $ do
-       warnLog (Data.Text.unpack uname)
-       setRelationships
-       setFriendshipRelationships   
+       warnLog (Data.Text.unpack uname)      
        let authentication = Just $ MainGitHub.OAuth $ (DBC.pack auth)
        crawler authentication uname
+       setRelationships
+       setFriendshipRelationships   
        if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
 	     else return $ ResponseData "incorrect"
 
