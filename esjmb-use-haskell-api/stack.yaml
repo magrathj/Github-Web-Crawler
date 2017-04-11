@@ -49,7 +49,6 @@ packages:
   - location:
       git: https://github.com/Palmik/bson-generic.git
       commit: e078def65d0dee1ea7e3205f445e47d5937851f3
-
 # Dependency packages to be pulled from upstream that are not in the resolver
 # (e.g., acme-missiles-0.3)
 extra-deps: []

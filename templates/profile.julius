@@ -12,7 +12,7 @@ function getGetGraph() {
 
               function findValue(array, nameWeAreLookingFor) {
                  for(var i = 0; i<array.length; i++) {
-                     if(array[i].id === nameWeAreLookingFor) return i;
+                     if(array[i].name === nameWeAreLookingFor) return i;
                  }
                  return -1;
               };
@@ -25,7 +25,7 @@ function getGetGraph() {
               var color = d3.scaleOrdinal(d3.schemeCategory20);
 
               var simulation = d3.forceSimulation()
-                  .force("link", d3.forceLink().id(function(d) { return d.id; }))
+                  .force("link", d3.forceLink().id(function(d) { return d.name; }))
                   .force("charge", d3.forceManyBody())
                   .force("center", d3.forceCenter(width / 2, height / 2));
 
@@ -49,7 +49,7 @@ function getGetGraph() {
                       .on("end", dragended));
 
               node.append("title")
-                  .text(function(d) { return d.id; });
+                  .text(function(d) { return d.name; });
 
               simulation
                   .nodes(response.nodes)

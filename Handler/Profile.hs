@@ -142,4 +142,9 @@ formatUsers auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
              return (Reps any)
 
+			 
+data Node = Node{
+  id :: String,
+  group :: String
+} deriving(ToJSON, FromJSON, Generic, Eq, Show)
 

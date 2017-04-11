@@ -13,7 +13,7 @@ module UseHaskellAPI where
 import           Data.Aeson
 import           Data.Aeson.TH
 import           Data.Bson.Generic
-import           GHC.Generics
+import           GHC.Generics 
 import           Servant
 import           Data.Text
 import           Data.Text.Encoding
@@ -30,7 +30,6 @@ import           GitHub.Data.Repos as GHDR
 import           GitHub.Data.Name as GHDN
 
 
-
 data ResponseData = ResponseData { response :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
@@ -38,10 +37,12 @@ data StartCrawl = StartCrawl     { start :: Text
                                   ,authentication :: String
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
+			 
 data Node = Node{
-                   name :: String,
-				   group :: String
+  name :: String,
+  group :: String
 } deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
 
 data Links = Links{
                  source :: String,
