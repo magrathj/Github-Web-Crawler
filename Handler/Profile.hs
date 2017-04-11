@@ -69,7 +69,7 @@ follower_Rep_Text (Reps follower) = follower
 ----------------------------------------------
 
 crawlerport :: String
-crawlerport = "8080"
+crawlerport = "8081"
 
 crawlerhost :: String
 crawlerhost = "localhost"
@@ -105,8 +105,8 @@ getProfileR = do
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	following <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
 	let firstFollowing = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text following 
-        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) firstFollowing                        --(DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname))
-        let crawls = firstFollowing
+        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname)) ---firstFollowing (DBC.unpack (fromJust access_token)) 
+        let crawls = (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
 		

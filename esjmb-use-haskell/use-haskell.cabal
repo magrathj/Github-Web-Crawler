@@ -77,6 +77,10 @@ library
                      , github
                      , utf8-string
                      , hasbolt
+                     , servant-js
+                     , warp
+                     , wai-logger
+                     , wai-cors
   default-language:    Haskell2010
 
 executable use-haskell-exe

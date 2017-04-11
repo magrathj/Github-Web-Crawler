@@ -39,14 +39,14 @@ data StartCrawl = StartCrawl     { start :: Text
                                  } deriving (Generic, ToJSON, FromJSON, Show)
 
 data Node = Node{
-                   name :: Text,
-				   group :: Text
+                   name :: String,
+				   group :: String
 } deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 data Links = Links{
-                 source :: Text,
-                 target :: Text,
-                  value :: Text
+                 source :: String,
+                 target :: String,
+                  value :: String
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 

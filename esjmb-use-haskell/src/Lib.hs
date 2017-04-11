@@ -42,7 +42,7 @@ import           GHC.Generics
 import           Network.HTTP.Client          (defaultManagerSettings,
                                                newManager)
 import           Network.Wai
-import           Network.Wai.Handler.Warp
+import           Network.Wai.Handler.Warp 
 import           Network.Wai.Logger
 import           RestClient
 import           Servant
@@ -68,25 +68,11 @@ import           GitHub.Data.Repos as GHDR
 import           GitHub.Data.Name as GHDN
 import           Database.Bolt
 import           Data.Text.Encoding
+import           Servant.JS
+import           Network.Wai.Middleware.Cors
 
-
-startApp :: IO ()    -- set up wai logger for service to output apache style logging for rest calls
-startApp = withLogging $ \ aplogger -> do
-  warnLog "Starting use-haskell."
-
-  forkIO $ taskScheduler 5
-
-  let settings = setPort 8080 $ setLogger aplogger defaultSettings
-  runSettings settings app
-
-
-taskScheduler :: Int -> IO ()
-taskScheduler delay = do
-  warnLog $ "Task scheduler operating."
-
-  threadDelay $ delay * 1000000
-  taskScheduler delay -- tail recursion
-
+searchport :: String
+searchport = "8081"
 
 app :: Application
 app = serve api server
@@ -138,6 +124,38 @@ server =  getREADME  :<|>
       return graph
 
 
+
+
+startApp :: IO ()    -- set up wai logger for service to output apache style logging for rest calls
+startApp = withLogging $ \ aplogger -> do
+  warnLog "Starting use-haskell."
+  writeJSForAPI api jquery ( "www" Data.List.++ "/" Data.List.++ "jquery" Data.List.++ "/" Data.List.++ "api.js")
+  Network.Wai.Handler.Warp.run (read (searchport) ::Int) app 
+  forkIO $ taskScheduler 5
+
+  let settings = setPort 8081 $ setLogger aplogger defaultSettings
+  runSettings settings app
+
+
+taskScheduler :: Int -> IO ()
+taskScheduler delay = do
+  warnLog $ "Task scheduler operating."
+
+  threadDelay $ delay * 1000000
+  taskScheduler delay -- tail recursion
+
+
+
+
+
+
+
+
+
+
+
+
+
  
 -------------------------------------------------------------
 -- Grab data from the database
@@ -161,16 +179,16 @@ extractNode :: Record -> IO UseHaskellAPI.Node
 extractNode input = do 
    cruise1 <- input `Database.Bolt.at` "name" >>= exact :: IO Text
    cruise2 <- input `Database.Bolt.at` "group" >>= exact :: IO Text
-   return $ UseHaskellAPI.Node cruise1 cruise2
+   return $ UseHaskellAPI.Node (Data.Text.unpack cruise1) (Data.Text.unpack cruise2)
 
 
 
 extractLink :: Record -> IO Links        
 extractLink input = do 
    cruise1 <- input `Database.Bolt.at` "source" >>= exact :: IO Text
-   cruise2 <- input `Database.Bolt.at` "target" >>= exact :: IO Text   
+   cruise2 <- input `Database.Bolt.at` "target" >>= exact :: IO Text 
    cruise3 <- input `Database.Bolt.at` "type" >>= exact :: IO Text
-   return $ Links cruise1 cruise2 cruise3
+   return $ Links (Data.Text.unpack cruise1) (Data.Text.unpack cruise2) (Data.Text.unpack cruise3)
 
 
 
