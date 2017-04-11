@@ -171,8 +171,21 @@ getNode = do
    cruise1 <- mapM extractLink result
    cruise2 <- mapM extractNode result2
    return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH (n) OPTIONAL MATCH path=(n)-[*1..2]-(c) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n) OPTIONAL MATCH path=(n)-[r*1..2]-(c) where NONE( rel in r WHERE type(rel)='KNOWS') RETURN DISTINCT c.name as name, HEAD(LABELS(c)) as group"
+
+getNodeFriends :: IO SocialGraph
+getNodeFriends = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
   where cypher = "MATCH path = (n:User)<-[r:FRIENDS]-(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         cypher2 = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN DISTINCT n.name as name, HEAD(LABELS(n)) as group"
+
 
 
 
