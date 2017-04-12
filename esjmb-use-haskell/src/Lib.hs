@@ -85,7 +85,8 @@ api = Proxy
 server :: Server API
 server =  getREADME  :<|>
           initialize :<|>
-          getGraph
+          getGraph   :<|>
+          getGraphFriends
 
   where
 

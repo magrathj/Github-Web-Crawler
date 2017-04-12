@@ -39,4 +39,4 @@ getGraph    :: ClientM SocialGraph
 -- | The following provides the implementations of these types
 -- Note that the order of the functions must match the endpoints in the type API from UseHaskell.hs
 
-(getREADME :<|> initialize :<|> getGraph) = client restAPI 
+(getREADME :<|> initialize :<|> getGraph :<|> getGraphFriends) = client restAPI 

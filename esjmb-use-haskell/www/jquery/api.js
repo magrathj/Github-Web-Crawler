@@ -30,3 +30,13 @@ var getGetGraph = function(onSuccess, onError)
     , type: 'GET'
     });
 }
+
+var getGetGraphFriends = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getGraphFriends'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}
