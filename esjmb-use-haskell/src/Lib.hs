@@ -125,8 +125,19 @@ server =  getREADME  :<|>
       return graph
 
 
+---------------------------------------------------------------------------
+---   get FriendShip Graph Function
+---------------------------------------------------------------------------  
+    getGraphFriends :: Handler SocialGraph 
+    getGraphFriends = liftIO $ do
+      warnLog "Getting Friend-Graph Data!!!!!"  
+      graph <- getNodeFriends
+      return graph
 
 
+---------------------------------------------------------------------------
+---   Start APP IO () FUNCTION
+---------------------------------------------------------------------------  
 startApp :: IO ()    -- set up wai logger for service to output apache style logging for rest calls
 startApp = withLogging $ \ aplogger -> do
   warnLog "Starting use-haskell."
