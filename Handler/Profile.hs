@@ -69,7 +69,7 @@ follower_Rep_Text (Reps follower) = follower
 ----------------------------------------------
 
 crawlerport :: String
-crawlerport = "8081"
+crawlerport = "8080"
 
 crawlerhost :: String
 crawlerhost = "localhost"
