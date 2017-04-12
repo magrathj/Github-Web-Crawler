@@ -1,7 +1,7 @@
 function getGetGraph() {
   d3.select("svg").selectAll("*").remove();
   var responsei = $.ajax({
-          url: "http://localhost:8080/getGraph",
+          url: "http://localhost:8000/getGraph",
           type: "get",
           contentType: "text/plain",
           dataType: "json",

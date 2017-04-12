@@ -73,7 +73,7 @@ import           Network.Wai.Middleware.Cors
 
 
 searchport :: String
-searchport = "8080"
+searchport = "8000"
 
 app :: Application
 app = serve api server
@@ -134,7 +134,7 @@ startApp = withLogging $ \ aplogger -> do
   Network.Wai.Handler.Warp.run (read (searchport) ::Int) app 
   forkIO $ taskScheduler 5
 
-  let settings = setPort 8080 $ setLogger aplogger defaultSettings
+  let settings = setPort 8000 $ setLogger aplogger defaultSettings
   runSettings settings app
 
 
