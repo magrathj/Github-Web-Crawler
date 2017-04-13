@@ -109,11 +109,14 @@ server =  getREADME              :<|>
        let authentication = Just $ MainGitHub.OAuth $ (DBC.pack auth)
        checkDB <- lookupNodeNeo uname
        case checkDB of
-            False ->  return $ ResponseData "already there"   -- Isnt empty, so already there
-            True -> do
-	       crawler authentication uname
+            False ->  do
+               deleteFriendshipsandFollowings
                setRelationships
-               setFriendshipRelationships   
+               setFollowing
+               setFriendshipRelationships  
+               return $ ResponseData "already there"   -- github name is already in db
+            True -> do
+               crawler authentication uname 
                if (uname == (Data.Text.Encoding.decodeUtf8 "jaytcd")) then  return $ ResponseData "correct"
 	            else return $ ResponseData "incorrect"
 
@@ -469,13 +472,35 @@ setRelationships = do
    return ()
   where cypher = "MATCH (n:User) MATCH (m:Fol ) WHERE n.name = m.name MERGE (n)-[:FOLLOWS]->(m)"
 
+setFollowing :: IO ()
+setFollowing = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MERGE (a)-[r:FOLLOWING]->(c)"
+
+
+
 setFriendshipRelationships :: IO ()
 setFriendshipRelationships = do
    pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
    result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
    Database.Bolt.close pipe
    return ()
-  where cypher = "MATCH p = (a:User) --> (b) --> (c:User) MATCH z = (d:User) --> (e) --> (f:User) WHERE a.name = f.name AND d.name = c.name MERGE (a)-[r:FRIENDS]->(c)"
+  where cypher = "MATCH (n:User)-[r:FOLLOWING]->(m:User) MATCH (n)<-[t:FOLLOWING]-(m) MERGE (n)-[:FRIENDS]->(m) MERGE (n)<-[:FRIENDS]-(m)"
+
+deleteFriendshipsandFollowings :: IO ()
+deleteFriendshipsandFollowings = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH ()-[r:FRIENDS]-() DELETE r" 
+        cypher2 = "MATCH ()-[r:FOLLOWING]-() DELETE r"
+
+
 
 getFriends :: IO()
 getFriends = do

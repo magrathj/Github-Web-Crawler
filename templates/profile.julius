@@ -146,7 +146,8 @@ function getGetGraphFriends() {
               node.append("title")
                   .text(function(d) { return d.name; });
 
-              simulation
+            
+			  simulation
                   .nodes(response.nodes)
                   .on("tick", ticked);
 
