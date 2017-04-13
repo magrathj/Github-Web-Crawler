@@ -84,13 +84,13 @@ restAPI = S.Proxy
 
 
 
-getREADME                 :: ClientM ResponseData
+getGraphFollowers         :: ClientM SocialGraph
 initialize                :: StartCrawl -> ClientM ResponseData
 getGraph                  :: ClientM SocialGraph
 getGraphFriends           :: ClientM SocialGraph
 getDegreeDistribution     :: ClientM Degree
 
-(getREADME :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution) = client restAPI 
+(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution) = client restAPI 
 
 
 ----------------------------------------------

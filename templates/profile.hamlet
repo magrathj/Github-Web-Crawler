@@ -10,7 +10,8 @@
       OAuth token <strong><span class="username">#{show crawls}</span></strong>!
       
       
-    <input type="button" value="Social Graph" id="MyButton" onclick="getGetGraph();">
+    <input type="button" value="All Nodes" id="MyButton" onclick="getGetGraph();">
+    <input type="button" value="Followers Graph" id="MyButton" onclick="getGetGraphFollowers();">
     <input type="button" value="Friendship Graph" id="MyButton" onclick="getGetGraphFriends();">
     <input type="button" value="Degree Distribution" id="MyButton" onclick="getDegreeDistribution();">
       

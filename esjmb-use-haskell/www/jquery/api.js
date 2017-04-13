@@ -1,8 +1,8 @@
 
-var getGetREADME = function(onSuccess, onError)
+var getGetGraphFollowers = function(onSuccess, onError)
 {
   $.ajax(
-    { url: '/getREADME'
+    { url: '/getGraphFollowers'
     , success: onSuccess
     , error: onError
     , type: 'GET'

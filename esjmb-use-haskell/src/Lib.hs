@@ -83,7 +83,7 @@ api = Proxy
 
 
 server :: Server API
-server =  getREADME              :<|>
+server =  getGraphFollowers      :<|>
           initialize             :<|>
           getGraph               :<|>
           getGraphFriends        :<|>
@@ -94,11 +94,11 @@ server =  getREADME              :<|>
 ---------------------------------------------------------------------------
 ---   get Function
 ---------------------------------------------------------------------------  
-    getREADME :: Handler ResponseData -- fns with no input, second getREADME' is for demo below
-    getREADME = liftIO $ do
-      [rPath] <- getArgs         -- alternatively (rPath:xs) <- getArgs
-      s       <- Prelude.readFile rPath
-      return $ ResponseData s
+    getGraphFollowers :: Handler SocialGraph 
+    getGraphFollowers = liftIO $ do
+      warnLog "Getting Follower Graph Data!!!!!"  
+      graph <- getNodeFollowers
+      return graph
 
 ---------------------------------------------------------------------------
 ---   post Function
@@ -211,6 +211,19 @@ getNodeFriends = do
    return $ SocialGraph cruise2 cruise1
   where cypher = "MATCH path = (n:User)<-[r:FRIENDS]-(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         cypher2 = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN DISTINCT n.name as name, HEAD(LABELS(n)) as group"
+
+getNodeFollowers :: IO SocialGraph
+getNodeFollowers = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH path = (n:User)<-[r:FOLLOWING]->(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n:User)<-[r:FOLLOWING]->(p:User) RETURN n.name as name, HEAD(LABELS(n)) as group"
+
 
 degreeDistribution :: IO Degree
 degreeDistribution = do

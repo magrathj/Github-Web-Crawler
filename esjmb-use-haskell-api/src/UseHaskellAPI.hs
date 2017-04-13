@@ -61,7 +61,7 @@ data Degree = Degree{
 }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
 
-type API = "getREADME"                  :> Get '[JSON] ResponseData
+type API = "getGraphFollowers"          :> Get '[JSON] SocialGraph
       :<|> "initialize"                 :> ReqBody '[JSON] StartCrawl  :> Post '[JSON] ResponseData
       :<|> "getGraph"                   :> Get '[JSON] SocialGraph 
 	  :<|> "getGraphFriends"            :> Get '[JSON] SocialGraph 
