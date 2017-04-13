@@ -40,3 +40,13 @@ var getGetGraphFriends = function(onSuccess, onError)
     , type: 'GET'
     });
 }
+
+var getGetDegreeDistribution = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getDegreeDistribution'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}

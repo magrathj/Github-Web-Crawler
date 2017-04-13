@@ -12,7 +12,8 @@
       
     <input type="button" value="Social Graph" id="MyButton" onclick="getGetGraph();">
     <input type="button" value="Friendship Graph" id="MyButton" onclick="getGetGraphFriends();">
+    <input type="button" value="Degree Distribution" id="MyButton" onclick="getDegreeDistribution();">
       
-    <svg width="960" height="600">
+    <svg width="1700" height="500">
     <script src="https://d3js.org/d3.v4.min.js">
     <script>

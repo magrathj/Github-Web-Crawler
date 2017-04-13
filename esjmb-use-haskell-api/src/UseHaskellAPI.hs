@@ -55,8 +55,14 @@ data SocialGraph = SocialGraph{   nodes :: [Node],
 	                              links :: [Links]
                                }deriving(ToJSON, FromJSON, Generic, Eq, Show)
 
+data Degree = Degree{
+                      degree       :: [String],
+                      distribution :: [Int]
+}deriving(ToJSON, FromJSON, Generic, Eq, Show)
+
 
 type API = "getREADME"                  :> Get '[JSON] ResponseData
       :<|> "initialize"                 :> ReqBody '[JSON] StartCrawl  :> Post '[JSON] ResponseData
       :<|> "getGraph"                   :> Get '[JSON] SocialGraph 
 	  :<|> "getGraphFriends"            :> Get '[JSON] SocialGraph 
+      :<|> "getDegreeDistribution"      :> Get '[JSON] Degree 

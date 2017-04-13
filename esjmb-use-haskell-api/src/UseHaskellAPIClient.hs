@@ -32,11 +32,12 @@ restAPI = Proxy
 -- Each function matches one of the endpoints in type API from UseHaskellAPI.hs
 
 
-getREADME   :: ClientM ResponseData
-initialize  :: StartCrawl -> ClientM ResponseData
-getGraph    :: ClientM SocialGraph
+getREADME                 :: ClientM ResponseData
+initialize                :: StartCrawl -> ClientM ResponseData
+getGraph                  :: ClientM SocialGraph
+getDegreeDistribution     :: ClientM Degree
 
 -- | The following provides the implementations of these types
 -- Note that the order of the functions must match the endpoints in the type API from UseHaskell.hs
 
-(getREADME :<|> initialize :<|> getGraph :<|> getGraphFriends) = client restAPI 
+(getREADME :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution) = client restAPI 

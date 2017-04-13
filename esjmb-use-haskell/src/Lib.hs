@@ -83,10 +83,11 @@ api = Proxy
 
 
 server :: Server API
-server =  getREADME  :<|>
-          initialize :<|>
-          getGraph   :<|>
-          getGraphFriends
+server =  getREADME              :<|>
+          initialize             :<|>
+          getGraph               :<|>
+          getGraphFriends        :<|>
+		  getDegreeDistribution
 
   where
 
@@ -134,6 +135,16 @@ server =  getREADME  :<|>
       warnLog "Getting Friend-Graph Data!!!!!"  
       graph <- getNodeFriends
       return graph
+
+---------------------------------------------------------------------------
+---   get Degree Distribution
+---------------------------------------------------------------------------  
+    getDegreeDistribution :: Handler Degree 
+    getDegreeDistribution = liftIO $ do
+      warnLog "Getting Degree Data!!!!!"  
+      graph <- degreeDistribution
+      return graph
+
 
 
 ---------------------------------------------------------------------------
@@ -198,7 +209,29 @@ getNodeFriends = do
   where cypher = "MATCH path = (n:User)<-[r:FRIENDS]-(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         cypher2 = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN DISTINCT n.name as name, HEAD(LABELS(n)) as group"
 
+degreeDistribution :: IO Degree
+degreeDistribution = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractDegree result
+   cruise2 <- mapM extractDist result
+   return $ Degree cruise1 cruise2
+  where cypher = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree RETURN degree, count(nodes) as distribution order by degree asc"
 
+
+
+  
+extractDegree :: Record -> IO String       
+extractDegree input = do 
+   cruise1 <- input `Database.Bolt.at` "degree" >>= exact :: IO Int
+   let convert = show cruise1
+   return convert
+      
+extractDist :: Record -> IO Int       
+extractDist input = do 
+   cruise2 <- input `Database.Bolt.at` "distribution" >>= exact :: IO Int
+   return cruise2
 
 
 extractNode :: Record -> IO UseHaskellAPI.Node        
