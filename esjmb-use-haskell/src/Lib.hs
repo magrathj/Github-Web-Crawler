@@ -88,7 +88,8 @@ server =  getGraphFollowers      :<|>
           getGraph               :<|>
           getGraphFriends        :<|>
 		  getDegreeDistribution  :<|>
-          getClusterOfFriends
+          getClusterOfFriends    :<|>
+          getHighestDegreeNodes
 
   where
 
@@ -155,6 +156,11 @@ server =  getGraphFollowers      :<|>
       graph <- clusterOfFriends
       return graph
 
+    getHighestDegreeNodes :: Handler SocialGraph 
+    getHighestDegreeNodes = liftIO $ do
+      warnLog "Getting Cluster Data!!!!!"  
+      graph <- highestDegreeNodes
+      return graph
 
 
 ---------------------------------------------------------------------------
@@ -255,6 +261,17 @@ clusterOfFriends = do
   where cypher = "MATCH (a)-[:FRIENDS]-(b) WITH a, count(distinct b) as neighbours MATCH p = (a)-[:FRIENDS]-()-[r:FRIENDS]-()-[:FRIENDS]-(a) WHERE exists(a.name) WITH a, p, neighbours, count(distinct r) AS connected_neighbours, rels(p) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         cypher2 = "MATCH (a)-[:FRIENDS]-(b) WITH a, count(distinct b) as neighbours MATCH (a)-[:FRIENDS]-()-[r:FRIENDS]-()-[:FRIENDS]-(a) WHERE exists(a.name) WITH a, neighbours, count(distinct r) AS connected_neighbours WHERE neighbours>1 RETURN a.name as name, HEAD(LABELS(a)) as group"
 
+highestDegreeNodes :: IO SocialGraph
+highestDegreeNodes = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree WHERE degree >2 MATCH p = (nodes)-[:FRIENDS*1..2]->(d) WITH rels(p) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree WHERE degree >2 MATCH (nodes)-[:FRIENDS*1..2]->(d) RETURN Distinct d.name as name, HEAD(LABELS(d)) as group"
 
 
 

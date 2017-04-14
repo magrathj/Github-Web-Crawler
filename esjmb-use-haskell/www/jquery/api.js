@@ -60,3 +60,13 @@ var getGetClusterOfFriends = function(onSuccess, onError)
     , type: 'GET'
     });
 }
+
+var getGetHighestDegreeNodes = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getHighestDegreeNodes'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}
