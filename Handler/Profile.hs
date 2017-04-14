@@ -108,8 +108,9 @@ getProfileR = do
     	let uname = lookup "login" sess
 	let auth = Just $ MainGitHub.OAuth $ fromJust access_token
 	following <- liftIO $ followers' (En.decodeUtf8 (fromJust uname)) auth
-	--let firstFollowing = Data.List.head $ Data.List.tail $ Data.List.map follower_Rep_Text following 
-        liftIO $ makeApiCall (DBC.unpack (fromJust access_token)) (En.decodeUtf8 (fromJust uname)) --- (DBC.unpack (fromJust access_token)) 
+	let firstFollowing = Data.List.map follower_Rep_Text following 
+        let functionToCrawl = makeApiCall (DBC.unpack (fromJust access_token)) ---(En.decodeUtf8 (fromJust uname)) --- (DBC.unpack (fromJust access_token)) 
+        liftIO $ mapM functionToCrawl firstFollowing 
         let crawls = (En.decodeUtf8 (fromJust uname))
         setTitle . toHtml $ En.decodeUtf8 (fromJust uname) <> "'s User page"
         $(widgetFile "profile")
