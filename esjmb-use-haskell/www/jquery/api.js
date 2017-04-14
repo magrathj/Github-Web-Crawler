@@ -50,3 +50,13 @@ var getGetDegreeDistribution = function(onSuccess, onError)
     , type: 'GET'
     });
 }
+
+var getGetClusterOfFriends = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getClusterOfFriends'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}

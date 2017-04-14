@@ -89,8 +89,10 @@ initialize                :: StartCrawl -> ClientM ResponseData
 getGraph                  :: ClientM SocialGraph
 getGraphFriends           :: ClientM SocialGraph
 getDegreeDistribution     :: ClientM Degree
+getClusterOfFriends       :: ClientM SocialGraph
 
-(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution) = client restAPI 
+(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution :<|> getClusterOfFriends) = client restAPI 
+
 
 
 ----------------------------------------------
@@ -142,10 +144,3 @@ formatUsers ::  Maybe GHD.Auth -> GithubUsers.SimpleUser ->IO(Reps)
 formatUsers auth repo = do
              let any = GithubUsers.untagName $ GithubUsers.simpleUserLogin repo
              return (Reps any)
-
-			 
-data Node = Node{
-  id :: String,
-  group :: String
-} deriving(ToJSON, FromJSON, Generic, Eq, Show)
-

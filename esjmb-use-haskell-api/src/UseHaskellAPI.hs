@@ -66,3 +66,4 @@ type API = "getGraphFollowers"          :> Get '[JSON] SocialGraph
       :<|> "getGraph"                   :> Get '[JSON] SocialGraph 
 	  :<|> "getGraphFriends"            :> Get '[JSON] SocialGraph 
       :<|> "getDegreeDistribution"      :> Get '[JSON] Degree 
+      :<|> "getClusterOfFriends"        :> Get '[JSON] SocialGraph 

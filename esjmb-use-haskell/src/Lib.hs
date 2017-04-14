@@ -87,12 +87,13 @@ server =  getGraphFollowers      :<|>
           initialize             :<|>
           getGraph               :<|>
           getGraphFriends        :<|>
-		  getDegreeDistribution
+		  getDegreeDistribution  :<|>
+          getClusterOfFriends
 
   where
 
 ---------------------------------------------------------------------------
----   get Function
+---   get Function Followers 
 ---------------------------------------------------------------------------  
     getGraphFollowers :: Handler SocialGraph 
     getGraphFollowers = liftIO $ do
@@ -101,7 +102,7 @@ server =  getGraphFollowers      :<|>
       return graph
 
 ---------------------------------------------------------------------------
----   post Function
+---   post Function (start the crawler)
 ---------------------------------------------------------------------------  
     initialize :: StartCrawl -> Handler ResponseData -- fns with no input, second getREADME' is for demo below
     initialize (StartCrawl uname auth) = liftIO $ do
@@ -121,7 +122,7 @@ server =  getGraphFollowers      :<|>
 	            else return $ ResponseData "incorrect"
 
 ---------------------------------------------------------------------------
----   get Graph Function
+---   get Graph Function  (get all nodes in the db)
 ---------------------------------------------------------------------------  
     getGraph :: Handler SocialGraph 
     getGraph = liftIO $ do
@@ -131,7 +132,7 @@ server =  getGraphFollowers      :<|>
 
 
 ---------------------------------------------------------------------------
----   get FriendShip Graph Function
+---   get FriendShip Graph Function (get nodes that are following each other)
 ---------------------------------------------------------------------------  
     getGraphFriends :: Handler SocialGraph 
     getGraphFriends = liftIO $ do
@@ -140,12 +141,18 @@ server =  getGraphFollowers      :<|>
       return graph
 
 ---------------------------------------------------------------------------
----   get Degree Distribution
+---   get Degree Distribution (plot the degree distribution of the friendship graph...hope for )
 ---------------------------------------------------------------------------  
     getDegreeDistribution :: Handler Degree 
     getDegreeDistribution = liftIO $ do
       warnLog "Getting Degree Data!!!!!"  
       graph <- degreeDistribution
+      return graph
+
+    getClusterOfFriends :: Handler SocialGraph 
+    getClusterOfFriends = liftIO $ do
+      warnLog "Getting Cluster Data!!!!!"  
+      graph <- clusterOfFriends
       return graph
 
 
@@ -234,6 +241,21 @@ degreeDistribution = do
    cruise2 <- mapM extractDist result
    return $ Degree cruise1 cruise2
   where cypher = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree RETURN degree, count(nodes) as distribution order by degree asc"
+
+
+clusterOfFriends :: IO SocialGraph
+clusterOfFriends = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH (a)-[:FRIENDS]-(b) WITH a, count(distinct b) as neighbours MATCH p = (a)-[:FRIENDS]-()-[r:FRIENDS]-()-[:FRIENDS]-(a) WHERE exists(a.name) WITH a, p, neighbours, count(distinct r) AS connected_neighbours, rels(p) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (a)-[:FRIENDS]-(b) WITH a, count(distinct b) as neighbours MATCH (a)-[:FRIENDS]-()-[r:FRIENDS]-()-[:FRIENDS]-(a) WHERE exists(a.name) WITH a, neighbours, count(distinct r) AS connected_neighbours WHERE neighbours>1 RETURN a.name as name, HEAD(LABELS(a)) as group"
+
+
 
 
 
