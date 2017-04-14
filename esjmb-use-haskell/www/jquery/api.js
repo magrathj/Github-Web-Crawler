@@ -70,3 +70,23 @@ var getGetHighestDegreeNodes = function(onSuccess, onError)
     , type: 'GET'
     });
 }
+
+var getGetFriendsByCompany = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getFriendsByCompany'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}
+
+var getGetFriendsByLocation = function(onSuccess, onError)
+{
+  $.ajax(
+    { url: '/getFriendsByLocation'
+    , success: onSuccess
+    , error: onError
+    , type: 'GET'
+    });
+}

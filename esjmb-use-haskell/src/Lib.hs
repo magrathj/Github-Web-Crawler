@@ -89,7 +89,9 @@ server =  getGraphFollowers      :<|>
           getGraphFriends        :<|>
 		  getDegreeDistribution  :<|>
           getClusterOfFriends    :<|>
-          getHighestDegreeNodes
+          getHighestDegreeNodes  :<|>
+          getFriendsByCompany    :<|>
+          getFriendsByLocation
 
   where
 
@@ -115,7 +117,9 @@ server =  getGraphFollowers      :<|>
                deleteFriendshipsandFollowings
                setRelationships
                setFollowing
-               setFriendshipRelationships  
+               setFriendshipRelationships 
+               setFriendsByLocation
+               setFriendsByCompany 
                return $ ResponseData "already there"   -- github name is already in db
             True -> do
                crawler authentication uname 
@@ -162,6 +166,17 @@ server =  getGraphFollowers      :<|>
       graph <- highestDegreeNodes
       return graph
 
+    getFriendsByCompany :: Handler SocialGraph 
+    getFriendsByCompany = liftIO $ do
+      warnLog "Getting Company Data!!!!!"  
+      graph <- friendsByCompany
+      return graph
+
+    getFriendsByLocation :: Handler SocialGraph 
+    getFriendsByLocation = liftIO $ do
+      warnLog "Getting Location Data!!!!!"  
+      graph <- friendsByLocation
+      return graph
 
 ---------------------------------------------------------------------------
 ---   Start APP IO () FUNCTION
@@ -273,6 +288,29 @@ highestDegreeNodes = do
   where cypher = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree WHERE degree >2 MATCH p = (nodes)-[:FRIENDS*1..2]->(d) WITH rels(p) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
         cypher2 = "MATCH (n:User)-[r:FRIENDS]->() WITH n as nodes, count(distinct r) as degree WHERE degree >2 MATCH (nodes)-[:FRIENDS*1..2]->(d) RETURN Distinct d.name as name, HEAD(LABELS(d)) as group"
 
+friendsByLocation :: IO SocialGraph
+friendsByLocation = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH path = (n:User)-[r:LOCATION]-(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n:User)-[r:LOCATION]-(p:User) RETURN DISTINCT n.name as name, HEAD(LABELS(n)) as group"
+
+friendsByCompany :: IO SocialGraph
+friendsByCompany = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   result2 <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher2) 
+   Database.Bolt.close pipe
+   cruise1 <- mapM extractLink result
+   cruise2 <- mapM extractNode result2
+   return $ SocialGraph cruise2 cruise1
+  where cypher = "MATCH path = (n:User)-[r:COMPANY]-(p:User) WITH rels(path) AS rels UNWIND rels AS rel WITH DISTINCT rel RETURN startnode(rel).name as source, endnode(rel).name as target, type(rel) as type"
+        cypher2 = "MATCH (n:User)-[r:COMPANY]-(p:User) RETURN DISTINCT n.name as name, HEAD(LABELS(n)) as group"
 
 
 
@@ -542,6 +580,8 @@ setFriendshipRelationships = do
    return ()
   where cypher = "MATCH (n:User)-[r:FOLLOWING]->(m:User) MATCH (n)<-[t:FOLLOWING]-(m) MERGE (n)-[:FRIENDS]->(m) MERGE (n)<-[:FRIENDS]-(m)"
 
+
+
 deleteFriendshipsandFollowings :: IO ()
 deleteFriendshipsandFollowings = do
    pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
@@ -561,6 +601,25 @@ getFriends = do
    Database.Bolt.close pipe
    return ()
  where cypher = "MATCH (n:User)<-[r:FRIENDS]-(p:User) RETURN n,r,p"
+
+setFriendsByLocation :: IO ()
+setFriendsByLocation = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH path = (n:User)-[r:FRIENDS]-(p:User) WHERE NOT n.location = '' and NOT p.location = '' and n.location = p.location MERGE (n)-[z:LOCATION]-(p) "
+
+setFriendsByCompany :: IO ()
+setFriendsByCompany = do
+   pipe <- Database.Bolt.connect $ def { user = "neo4j", password = "09/12/1992" }
+   result <- Database.Bolt.run pipe $ Database.Bolt.query (Data.Text.pack cypher) 
+   Database.Bolt.close pipe
+   return ()
+  where cypher = "MATCH path = (n:User)-[r:FRIENDS]-(p:User) WHERE NOT n.company = '' and NOT p.company = '' and n.company = p.company MERGE (n)-[z:COMPANY]-(p)"
+
+
+
 
 
 

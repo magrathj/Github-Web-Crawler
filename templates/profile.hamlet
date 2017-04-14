@@ -16,7 +16,11 @@
     <input type="button" value="Degree Distribution" id="MyButton" onclick="getDegreeDistribution();">
     <input type="button" value="Display The Highest Degree Nodes" id="MyButton" onclick="getGetHighestDegreeNodes();">
     <input type="button" value="Cluster of Friends" id="MyButton" onclick="getGetClusterOfFriends();">
-      
+    <input type="button" value="Friends by Location" id="MyButton" onclick="getGetFriendsByLocation();">
+    <input type="button" value="Friends by Company" id="MyButton" onclick="getGetFriendsByCompany();">
+         
+ 
+        
     <svg width="1700" height="500">
     <script src="https://d3js.org/d3.v4.min.js">
     <script>

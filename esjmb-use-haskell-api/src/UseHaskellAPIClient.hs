@@ -39,8 +39,10 @@ getGraphFriends           :: ClientM SocialGraph
 getDegreeDistribution     :: ClientM Degree
 getClusterOfFriends       :: ClientM SocialGraph
 getHighestDegreeNodes     :: ClientM SocialGraph
+getFriendsByCompany       :: ClientM SocialGraph
+getFriendsByLocation      :: ClientM SocialGraph
 
 -- | The following provides the implementations of these types
 -- Note that the order of the functions must match the endpoints in the type API from UseHaskell.hs
 
-(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution :<|> getClusterOfFriends :<|> getHighestDegreeNodes) = client restAPI 
+(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution :<|> getClusterOfFriends :<|> getHighestDegreeNodes :<|> getFriendsByCompany :<|> getFriendsByLocation) = client restAPI 

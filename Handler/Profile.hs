@@ -91,8 +91,10 @@ getGraphFriends           :: ClientM SocialGraph
 getDegreeDistribution     :: ClientM Degree
 getClusterOfFriends       :: ClientM SocialGraph
 getHighestDegreeNodes     :: ClientM SocialGraph
+getFriendsByCompany       :: ClientM SocialGraph
+getFriendsByLocation      :: ClientM SocialGraph
 
-(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution :<|> getClusterOfFriends :<|> getHighestDegreeNodes) = client restAPI 
+(getGraphFollowers :<|> initialize :<|> getGraph :<|> getGraphFriends :<|> getDegreeDistribution :<|> getClusterOfFriends :<|> getHighestDegreeNodes :<|> getFriendsByCompany :<|> getFriendsByLocation) = client restAPI 
 
 
 
